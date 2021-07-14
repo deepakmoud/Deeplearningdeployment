@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static',filename = 'css/bootstrap.min.css')  }}" rel="stylesheet">
+
+    <title>Deep Learning</title>
+</head>
+
+<body>
+    <nav style="width: 100%;" class="navbar navbar-dark bg-secondary">
+        <a class="  navbar-brand" href="#" style="margin-left: 25px;">
+             <img src="{{ url_for('static',filename = 'image/logo.png')  }}" 
+             class="img-responsive" style="margin-top:10px;style="width: auto; height: auto; min-width: 600px;min-height: 600px;">
+          
+              
+              <a href="/aboutusnew" style="color: red; margin-right: 10px;">ABOUT US</a>
+            
+      </div>
+           
+        </a>
+        
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-5 d-none d-sm-block d-sm-none d-md-block d-md-none d-lg-block">
+
+                <img src="{{ url_for('static',filename = 'image/DanceBot-3-LG.gif')  }}" class="img-fluid"
+                    style="width: auto; height: auto; min-width: 400px;min-height: 400px;">
+
+            </div>
+
+            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-7 " style=" padding: 30px;">
+                <h1>Deep Learning</h1>
+                <br><br>
+                <p style="font-size:20px;text-align:justify; color:blue">It is a web portal to understand the basics of Machine Learning. It helps to understand data pre-processing, Supervised machine learning, Unsupervised Machine Learning, Feature Engineering, Feature selection and Natural language processing. It allows users to upload datasets which are to be pre-processed. It creates Machine Learning Model on Given datasets. It Extracts relevant features from datasets and also transforms Features. Natural language Processing model is also constructed model is used to identify sentiment of given comment. It is also used to translate  one language into another language. </p>
+              
+                
+                <br><br>
+                
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 300px;" src="{{ url_for('static',filename = 'image/dp ml.jpg')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title"; style="text-align:center">Artificial Neural Network</h5>
+                            <p class="card-text"; style="text-align:justify">Data preprocessing is a process of preparing the raw data and making it suitable for a machine learning model. It is the first and crucial step while creating a machine learning model. Data preprocessing is neccessory to train ml model.</p>
+            
+                            <a href="/preprocessing"><button type="button" class="btn btn-outline-primary">Image Classification Using ANN
+                                    &#9655;</button></a>
+                        </div>
+            
+            
+                    </div>
+                </div>
+            </div>
+            
+    
+    <br><br><br><br><br>
+    <div class="fixed-bottom ">
+        <div class="bg-secondary " style="min-height: 40px;">
+
+            <marquee style="color:#fff; margin-top: 7px;">
+                <h9>Developed by Department of Computer Engineering, PIET</h9>
+            </marquee>
+        </div>
+    </div>
+    <!-- change later-->
+    <script src="{{ url_for('static',filename = 'js/bootstrap.bundle.min.js')  }}"></script>
+
+</body>
+
+</html>
