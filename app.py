@@ -27,16 +27,14 @@ import sys
 import os
 import glob
 import re
-
-
+import cv2
+from  PIL import Image, ImageOps
 # Keras
 from keras.applications.imagenet_utils import preprocess_input, decode_predictions
 from keras.models import load_model
 from keras.preprocessing import image
+import io
 
-# Flask utils
-from flask import Flask, redirect, url_for, request, render_template
-from werkzeug.utils import secure_filename
 
 matplotlib.use('Agg')
 
@@ -46,7 +44,8 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 #------------------------------ Saving dataset---------------------------------
 # this is the path to save dataset for preprocessing
 pathfordataset = "static/data-preprocess/"
-pathfordatasetNew = "data-preprocess/new"   
+pathfordatasetNew = "data-preprocess/new/"  
+ 
 app.config['DFPr'] = pathfordataset
 app.config['DFPrNew'] = pathfordatasetNew
 #------------------------------ Saving dataset for Linear regression-------------------------------------------
@@ -85,13 +84,53 @@ def model_predict(file_path, model):
     x = preprocess_input(x, mode='caffe')
     preds = model.predict(x)
     return preds
-@app.route('/preprocessing')
-def preprocessing():
-    return render_template('preprocessing/preprocessing.html')
+
+@app.route('/downloadNewDataset')
+def download_file():
+    path1 = "static/data-preprocess/new/trained_dataset.csv"
+    return send_file(path1,as_attachment=True)
+
+#------------------------------Download Model-------------------------------------------
+@app.route('/downloadmodel')
+def download_model():
+    path1 = "static/data-preprocess/model/model.pkl"
+    return send_file(path1,as_attachment=True)
+
+#------------------------------About us-------------------------------------------
+@app.route('/aboutusnew')
+def aboutusnew():
+    return render_template('aboutusnew.html')
+#------------------------------Artificial Neural network-------------------------------------------
 
 
-@app.route('/preprocessing/preprocessing' , methods = ['GET','POST'])
-def upload():
+@app.route('/ann')
+def ann():
+    return render_template('/ann/ann.html')
+
+#------------------------------Signature Verificationn-------------------------------------------
+
+def model_predict(file_path, model):
+    img = image.load_img(file_path, target_size=(128, 128))
+
+    # Preprocessing the image
+    x = image.img_to_array(img)
+    # x = np.true_divide(x, 255)
+    x = np.expand_dims(x, axis=0)
+
+    # Be careful how your trained model deals with the input
+    # otherwise, it won't make correct prediction!
+    x = preprocess_input(x, mode='caffe')
+    preds = model.predict(x)
+    return preds
+
+@app.route('/ann/signatureverification/signatureverification')
+def signatureverification():
+    return render_template('/ann/signatureverification/signatureverification.html')
+
+
+@app.route('/ann/signatureverification/signatureverification',  methods=['GET', 'POST'])
+def signatureverification1():
+   
     if request.method == 'POST':
         my_dataset = request.files['my_dataset']
         my_model_name = request.form['name_of_model']
@@ -125,2706 +164,597 @@ def upload():
         vgg19_plot = os.path.join('kmeans\plot', '%s.png' % img_name1)
         plt.clf()
 
-        return render_template('/preprocessing/preprocessing_output.html', model_name=my_model_name,my_dataset=my_dataset, pred=result, visualize=input )
-#------------------------------Download Dataset-------------------------------------------
-@app.route('/downloadNewDataset')
-def download_file():
-    path1 = "static/data-preprocess/new/trained_dataset.csv"
-    return send_file(path1,as_attachment=True)
+        return render_template('/ann/signatureverification/signatureverificationoutput.html', model_name=my_model_name,my_dataset=my_dataset, pred=result, visualize=input )
 
-#------------------------------Download Model-------------------------------------------
-@app.route('/downloadmodel')
-def download_model():
-    path1 = "static/data-preprocess/model/model.pkl"
-    return send_file(path1,as_attachment=True)
+#-----------------------Digit Recognition---------------------------------------------
+model_digit = load_model("static/data-preprocess/model/MNISTANN.h5")
 
-#------------------------------About us-------------------------------------------
-@app.route('/aboutusnew')
-def aboutusnew():
-    return render_template('aboutusnew.html')
-#------------------------------Supervised machine Learning-------------------------------------------
-# for suprvised learning
-
-@app.route('/supervised')
-def supervised():
-    return render_template('/supervised/supervised.html')
-
-#------------------------------Linear Regression-------------------------------------------
-# for linear regression
-
-@app.route('/supervised/regression/linearRegression')
-def regressionLR():
-    return render_template('/supervised/regression/linearRegression.html')
+def import_and_predict(image_data):
+  
+  image_resized = cv2.resize(image_data, (28, 28)) 
+   
+  prediction = model_digit.predict(image_resized.reshape(1,784))
+  print('Prediction Score:\n',prediction[0])
+  thresholded = (prediction>0.5)*1
+  print('\nThresholded Score:\n',thresholded[0])
+  print('\nPredicted Digit:',np.where(thresholded == 1)[1][0])
+  digit = np.where(thresholded == 1)[1][0]
+  #st.image(image_data, use_column_width=True)
+  return digit
 
 
-@app.route('/supervised/regression/linearRegression',  methods=['GET', 'POST'])
-def simpleLinearRegression():
+
+@app.route('/ann/digit/digit')
+def digit():
+    return render_template('/ann/digit/digit.html')
+
+
+@app.route('/ann/digit/digit',  methods=['GET', 'POST'])
+def digit1():
+   
     if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
+        input_image = request.files['input_image']
+        print(input_image)
         my_model_name = request.form['name_of_model']
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
+        
+        dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
+        input_image.save(dataset_path)
+        
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
+        input=secure_filename(input_image.filename)
+        
+        image=Image.open(input_image)
+        image=np.array(image)
+        
+        #image=np.array(input_image)
+        preds = import_and_predict(image)
 
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
+        
 
+        return render_template('/ann/digit/digitoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        X = df.iloc[:,:-1]
-        y = df.iloc[:,-1]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
+#----------------------Image Classification cat/ Dog------------------------------
+model_cat = load_model("static/data-preprocess/model/FDPCNN1.h5")
 
-        regressor = LinearRegression()
-        regressor.fit(X_train, y_train)
-        intercept = regressor.intercept_
-        slope = regressor.coef_
-        training_score = regressor.score(X_train, y_train)
-        testing_score = regressor.score(X_test, y_test)
-
-        # visulization 
-        plt.scatter(df.iloc[:,0],y, color='red')
-        plt.plot(X, regressor.predict(X), color='blue')
-        plt.title('{} VS {}'.format(li[0], li[1]))
-        plt.xlabel('{}'.format(li[0]))
-        plt.ylabel('{}'.format(li[1]))
-        col_one = li[0]
-        col_last = li[1]
-        fig = plt.gcf()
-        img_name = 'data'
-        fig.savefig('static/Regression/onevarLR/plot/data.png', dpi=1500)
-        get_plot1 = os.path.join(app.config['LR1VARplot'], '%s.png' % img_name)
-        print(get_plot1)
-        plt.clf()
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(regressor,open("static/data-preprocess/model/model.pkl", 'wb')) 
+def import_and_predict_cat(image_data):
+  #x = cv2.resize(image_data, (48, 48)) 
+  #img = image.load_img(image_data, target_size=(48, 48))
+  #x = image.img_to_array(img)
+  size=(64, 64)
+  image=ImageOps.fit(image_data, size, Image.ANTIALIAS)
+  img=np.asarray(image)
+  img_reshape=np.expand_dims(img, axis=1)
+  img_reshape=img[np.newaxis,...]
+  result = model_cat .predict(img_reshape)
+  print(result)
+  #training_set.class_indices
+  if result[0][0] == 1:
+    prediction = "Dog" 
     
-        return render_template('/supervised/regression/outputSimLR.html', dataset_name=my_dataset.filename, 
-                               model_name=my_model_name,var1=intercept,var2=slope, visualize=get_plot1,
-                               data_shape=df.shape, 
-                               table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'), trainingscore=training_score, testingscore=testing_score, first_col=col_one, sec_col=col_last,)
+  else:
+    prediction = 'Cat'
+    #x = np.expand_dims(x, axis=1)
+  
+  
+  return prediction
 
-  #------------------------------Linear Regression for prediction(specific dataset)-------------------------------------------
-     
-@app.route('/supervised/regression/outputSimLR',  methods=['GET', 'POST'])
-def simpleLinearRegressionPred():
+
+@app.route('/ann/cat/cat')
+def cat():
+    return render_template('/ann/cat/cat.html')
+
+
+@app.route('/ann/cat/cat',  methods=['GET', 'POST'])
+def cat1():
+   
     if request.method == 'POST':
-        num1 = request.form['num1']
-        xPred = float(num1)
-        my_dataset = request.form['my_dataset']
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        X = df.iloc[:, :-1]
-        y = df.iloc[:, 1]
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-        
-        regressor = LinearRegression()
-        regressor.fit(X_train, y_train)
-        yPred = regressor.predict([[xPred]])
-        yPred = float(yPred)
-        col_one = li[0]
-        secCol = li[-1]
-        img_name = 'data'
-        get_plot1 = os.path.join(app.config['LR1VARplot'], '%s.png' % img_name)
-        return render_template('/supervised/regression/SLRpredicted.html', dataset_name=my_dataset, ans=yPred, model_name='Simple Linear Regressor Prediction', first_col=col_one, sec_col=secCol, num=num1, visualize=get_plot1)
-
-#------------------------------Multiple Linear Regression-------------------------------------------
-# for linear regression
-# linear regression multi variable
-
-@app.route('/supervised/regression/linearRegressionMV')
-def regressionMVLR():
-    return render_template('/supervised/regression/linearRegressionMV.html')
-
-#-------------------------------Logistic Classification-------------------------------------------
-
-
-@app.route('/supervised/logisticregression/logisticregression')
-def logisticregression1():
-    return render_template('/supervised/logisticregression/logisticregression.html')
-
-
-@app.route('/supervised/logisticregression/logisticregression',  methods=['GET', 'POST'])
-def logisticregression():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        print(class_type)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        # Fitting Logistic  Classification to the Training set
-        from sklearn.linear_model  import LogisticRegression
-        classifier = LogisticRegression(random_state=0,max_iter=1000)
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type=="binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/supervised/logisticregression/logisticregressionoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Logistic Classification prediction(Poecific dataset)-------------------------------------------
-        
-@app.route('/supervised/logisticregression/logisticregressionoutput',  methods=['GET', 'POST'])
-def logisticregressionPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        # Fitting Logistic Classification to the Training set
-        from sklearn.linear_model  import LogisticRegression
-        classifier = LogisticRegression(random_state=0)
-        classifier.fit(X_train, y_train)
-        if data_std == "yes":
-            output = classifier.predict(sc.transform([[num1,num2]]))
-        else:
-            output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/supervised/logisticregression/logisticregressionpredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Logistic Classifier', first_col=num1, second_col=num2, third_col=prediction)
-
-
-#---------------------Decision Tree----------------------------------------------
-
-
-
-@app.route('/supervised/decisiontree/tree')
-def decisiontree1():
-    return render_template('/supervised/decisiontree/tree.html')
-
-
-@app.route('/supervised/decisiontree/tree',  methods=['GET', 'POST'])
-def decisiontree():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
+        input_image = request.files['input_image']
+        print(input_image)
         my_model_name = request.form['name_of_model']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        print(class_type)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
+        
+        dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
+        input_image.save(dataset_path)
+        
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
+        input=secure_filename(input_image.filename)
+        
+        image=Image.open(input_image)
+        #image=np.array(image)
+        
+        #image=np.array(input_image)
+        preds = import_and_predict_cat(image)
+
+        
+
+        return render_template('/ann/cat/catoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
+
+
+#-------------Signature recognition-----------------------------------------------
+model_signaturerecognition = load_model("static/data-preprocess/model/signatureRecognition_VGG16folder_model.h5")
+SIGNATURE_CLASSES = ['001', '002', '003','004','006','009','012','013','014','015','016','017','018','019','020','021','022','023','024','025','026','027','028','029','030','031','032','033','034','035','036','037','038','039','040','041','042','043','044','045','046','047','048','049','050','051','052','053','054','055','056','057','058','059','060','061','062','063','064','065','066','067','068','069']
+def import_and_predict_recognition(image_data, model):
+  #img = image.load_img(image_data, target_size=(224, 224))
+  #image = image.img_to_array(img)
+  #img_reshap= np.expand_dims(image, axis=0)
+  #img_reshap = preprocess_input(img_reshap)
+  size=(224, 224)
+  image=ImageOps.fit(image_data, size, Image.ANTIALIAS)
+  img=np.asarray(image)
+  img_reshape=np.expand_dims(img, axis=1)
+  img_reshape=img[np.newaxis,...]
+  block4_pool_features = model.predict(img_reshape)
+  label_index=block4_pool_features.argmax()
+  print(block4_pool_features)
+  result=SIGNATURE_CLASSES[label_index]
+  return result
+
+
+@app.route('/ann/signaturerecognition/signaturerecognition')
+def signaturerecognition():
+    return render_template('/ann/signaturerecognition/signaturerecognition.html')
+
+
+@app.route('/ann/signaturerecognition/signaturerecognition',  methods=['GET', 'POST'])
+def signaturerecognition1():
+   
+    if request.method == 'POST':
+        input_image = request.files['input_image']
+        
+        my_model_name = request.form['name_of_model']
+        
+        dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
+        input_image.save(dataset_path)
+        
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
+        input=secure_filename(input_image.filename)
+        
+        image=Image.open(input_image)
+        #image=np.array(image)
+        
+        #image=np.array(input_image)
+        preds = import_and_predict_recognition(image, model_signaturerecognition)
+
+        
+
+        return render_template('/ann/signaturerecognition/signaturerecognitionoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
+
+#--------------------Animal Breed identification---------------------------------
+
+model_breed = load_model("static/data-preprocess/model/resnet_model.h5")
+def model_predict_breed(img_path, model):
+    img = image.load_img(img_path, target_size=(224, 224))
+
+    # Preprocessing the image
+    x = image.img_to_array(img)
+    # x = np.true_divide(x, 255)
+    x = np.expand_dims(x, axis=0)
+
+    # Be careful how your trained model deals with the input
+    # otherwise, it won't make correct prediction!
+    x = preprocess_input(x, mode='caffe')
+
+    preds = model.predict(x)
+    return preds
+
+@app.route('/ann/breed/breed')
+def breed():
+    return render_template('/ann/breed/breed.html')
+
+
+@app.route('/ann/breed/breed',  methods=['GET', 'POST'])
+def breed1():
+   
+    if request.method == 'POST':
+        my_dataset = request.files['input_image']
+        my_model_name = request.form['name_of_model']
+        
+        dataset_path = os.path.join(pathfordataset, secure_filename(my_dataset.filename))
         my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        # Fitting Decision Tree Classification to the Training set
-        from sklearn.tree import DecisionTreeClassifier
-        classifier = DecisionTreeClassifier(criterion = 'entropy', random_state = 42)
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
         
-           
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename(my_dataset.filename))
         
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "multiclass":
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/supervised/decisiontree/decisiontreeoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#---------------------Decision Tree prediction(Specific dataset)----------------------------------------------        
-@app.route('/supervised/decisiontree/decisiontreeoutput',  methods=['GET', 'POST'])
-def decisiontreePred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        # Fitting Decision Tree Classification to the Training set
-        from sklearn.tree import DecisionTreeClassifier
-        classifier = DecisionTreeClassifier(criterion = 'entropy', random_state = 42)
-        classifier.fit(X_train, y_train)
-        if data_std == "yes":
-            output = classifier.predict(sc.transform([[num1,num2]]))
-        else:
-            output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/supervised/decisiontree/decisiontreepredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Decision Tree', first_col=num1, second_col=num2, third_col=prediction)
-
-#---------------------Naive   Bayes Classification----------------------------------------------   
-
-
-@app.route('/supervised/naivebayes/naivebayes')
-def naivebayes1():
-    return render_template('/supervised/naivebayes/naivebayes.html')
-
-
-@app.route('/supervised/naivebayes/naivebayes',  methods=['GET', 'POST'])
-def naivebayes():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        print(my_model_name)
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        print(data_std)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        # Fitting Naive Bayes to the Training set
-        from sklearn.naive_bayes import GaussianNB
-        classifier = GaussianNB()
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type =="binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/supervised/naivebayes/naivebayesoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Naive Bayes prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/supervised/naivebayes/naivebayesoutput',  methods=['GET', 'POST'])
-def naivebayesPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-       
-        # Fitting Naive Bayes to the Training set
-        from sklearn.naive_bayes import GaussianNB
-        classifier = GaussianNB()
-        classifier.fit(X_train, y_train)
-        if data_std == "yes":
-            output = classifier.predict(sc.transform([[num1,num2]]))
-        else:
-            output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/supervised/naivebayes/naivebayespredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Naive Bayes Classifier', first_col=num1, second_col=num2, third_col=prediction)
-#---------------------Random Forest Classification----------------------------------------------   
-
-
-
-@app.route('/supervised/randomforest/randomforest')
-def randomforest1():
-    return render_template('/supervised/randomforest/randomforest.html')
-
-
-@app.route('/supervised/randomforest/randomforest',  methods=['GET', 'POST'])
-def randomforest():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        # Fitting Random Forest to the Training set
-        from sklearn.ensemble import RandomForestClassifier
-        classifier = RandomForestClassifier(n_estimators = 300, criterion = 'entropy', random_state = 0)
-        
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/supervised/randomforest/randomforestoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Random Forest Classification prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/supervised/randomforest/randomforestoutput',  methods=['GET', 'POST'])
-def randomforestPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-       
-        # Fitting Naive Bayes to the Training set
-        from sklearn.ensemble import RandomForestClassifier
-        classifier = RandomForestClassifier(n_estimators = 300, criterion = 'entropy', random_state = 0)
-        classifier.fit(X_train, y_train)
-        if data_std == "yes":
-            output = classifier.predict(sc.transform([[num1,num2]]))
-        else:
-            output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/supervised/randomforest/randomforestpredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Random forest Classifier', first_col=num1, second_col=num2, third_col=prediction)
-
-
-
-#---------------------Support Vector Machine  Classification----------------------------------------------   
-
-
-
-@app.route('/supervised/svm/svm')
-def svm1():
-    return render_template('/supervised/svm/svm.html')
-
-
-@app.route('/supervised/svm/svm',  methods=['GET', 'POST'])
-def svm():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        
-        # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'rbf', random_state = 0, probability=True)
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/supervised/svm/svmoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Support Vector Machine Classification prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/supervised/svm/svmoutput',  methods=['GET', 'POST'])
-def svmPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-       
-        # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'rbf', random_state = 0, probability=True)
-        classifier.fit(X_train, y_train)
-        if data_std == "yes":
-            output = classifier.predict(sc.transform([[num1,num2]]))
-        else:
-            output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/supervised/svm/svmpredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Support Vector Machine', first_col=num1, second_col=num2, third_col=prediction)
-
-#---------------------k Nearest Neighbor  Classification----------------------------------------------   
-
-
-
-@app.route('/supervised/knn/knn')
-def knn1():
-    return render_template('/supervised/knn/knn.html')
-
-
-@app.route('/supervised/knn/knn',  methods=['GET', 'POST'])
-def knn():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        #col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-        
-        # Fitting K-NN to the Training set
-        from sklearn.neighbors import KNeighborsClassifier
-        classifier =  KNeighborsClassifier(n_neighbors = 5, metric = 'minkowski', p = 2)
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/supervised/knn/knnoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------KNN Classification prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/supervised/knn/knnoutput',  methods=['GET', 'POST'])
-def knnPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X_train = sc.fit_transform(X_train)
-            X_test = sc.transform(X_test)
-       
-       # Fitting K-NN to the Training set
-        from sklearn.neighbors import KNeighborsClassifier
-        classifier =  KNeighborsClassifier(n_neighbors = 5, metric = 'minkowski', p = 2)
-        classifier.fit(X_train, y_train)
-        if data_std == "yes":
-            output = classifier.predict(sc.transform([[num1,num2]]))
-        else:
-            output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/supervised/knn/knnpredicted.html', dataset_name=my_dataset, ans=prediction, model_name='K Nearest Neighbor', first_col=num1, second_col=num2, third_col=prediction)
-#----------------------------------------------unsupervised learning------------------------------------
-
-
-
-
-@app.route('/unsupervised')
-def unsupervised():
-    return render_template('/unsupervised/unsupervised.html')
-
-#---------------------k Means Clustering----------------------------------------- 
-
-
-
-@app.route('/unsupervised/kmeans/kmeans')
-def kmeans1():
-    return render_template('/unsupervised/kmeans/kmeans.html')
-
-
-@app.route('/unsupervised/kmeans/kmeans',  methods=['GET', 'POST'])
-def kmeans():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        ncluster = int(request.form['ncluster'])
-        print(ncluster)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :].values
-       
-        
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X = sc.fit_transform(X)
-            
-        # Using the elbow method to find the optimal number of clusters
-        from sklearn.cluster import KMeans
-        wcss = []
-        for i in range(1, 11):
-            kmeans = KMeans(n_clusters = i, init = 'k-means++', random_state = 42)
-            kmeans.fit(X)
-            wcss.append(kmeans.inertia_)
-        plt.plot(range(1, 11), wcss)
-
-        plt.title('The Elbow Method')
-        plt.xlabel('Number of clusters')
-        plt.ylabel('WCSS')
-        fig = plt.gcf()
-        img_name1 = 'elbow'
-        fig.savefig('static/kmeans/plot/elbow.png', dpi=1500)
-        #elbow_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name1)
-        elbow_plot = os.path.join('kmeans\plot', '%s.png' % img_name1)
-        plt.clf()
-        # Fitting K-Means to the dataset
-        from sklearn.cluster import KMeans
-        kmeans = KMeans(n_clusters =ncluster, init = 'k-means++', random_state = 42)
-        y_kmeans = kmeans.fit_predict(X)
-        var1=kmeans.inertia_
-        var2=kmeans.cluster_centers_ 
-        # Visualising the clusters
-        plt.scatter(X[:,0], X[:,1], s = 100, c = 'black', label = 'Data Distribution')
-        plt.title('Data Distribution before clustering')
-        plt.xlabel('First feature ')
-        plt.ylabel('Second Feature ')
-        plt.legend()
-        fig = plt.gcf()
-        img_name2 = 'before'
-        fig.savefig('static/kmeans/plot/before.png', dpi=1500)
-        #before_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name2)
-        before_plot = os.path.join('kmeans\plot', '%s.png' % img_name2)
-        plt.clf()
-        # Visualising the clusters
-        plt.scatter(X[y_kmeans == 0, 0], X[y_kmeans == 0, 1], s = 100, c = 'red', label = 'Cluster 1')
-        plt.scatter(X[y_kmeans == 1, 0], X[y_kmeans == 1, 1], s = 100, c = 'blue', label = 'Cluster 2')
-        plt.scatter(X[y_kmeans == 2, 0], X[y_kmeans == 2, 1], s = 100, c = 'green', label = 'Cluster 3')
-        plt.scatter(X[y_kmeans == 3, 0], X[y_kmeans == 3, 1], s = 100, c = 'cyan', label = 'Cluster 4')
-        plt.scatter(X[y_kmeans== 4, 0], X[y_kmeans == 4, 1], s = 100, c = 'magenta', label = 'Cluster 5')
-        plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s = 300, c = 'yellow', label = 'Centroids')
-        plt.title('Data Distribution after clustering')
-        plt.xlabel('first Feature')
-        plt.ylabel('second feature')
-        plt.legend()
-        fig = plt.gcf()
-        img_name3 = 'after'
-        fig.savefig('static/kmeans/plot/after.png', dpi=1500)
-        #f.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f.filename)))
-        after_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name3)
-        
-        plt.clf()
-       #removed from render template for heroku deployment
-        # visualize1=elbow_plot,visualize2=before_plot,
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(kmeans,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/unsupervised/kmeans/kmeansoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=var1,
-                               var2=var2, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'),  
-                               visualize3=after_plot, dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Kmeans clustering prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/unsupervised/kmeans/kmeansoutput',  methods=['GET', 'POST'])
-def kmeansPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :].values
-        
-
-        # Feature Scaling
-        if data_std == "yes":
-            # standardizing the data
-            from sklearn.preprocessing import StandardScaler
-            scaler = StandardScaler()
-            X = scaler.fit_transform(X)
-       # Fitting K-Means to the dataset
-        from sklearn.cluster import KMeans
-        kmeans = KMeans(n_clusters = 5, init = 'k-means++', random_state = 42)
-        y_kmeans = kmeans.fit_predict(X)
-         
-        predict= kmeans.predict([[num1,num2]])
-        print(predict)
-        if predict==[0]:
-            result="Customer is careless"
-
-        elif predict==[1]:
-            result="Customer is standard"
-        elif predict==[2]:
-           result="Customer is Target"
-        elif predict==[3]:
-            result="Customer is careful"
-
-        else:
-            result="Custmor is sensible" 
-       
-        return render_template('/unsupervised/kmeans/kmeanspredicted.html', dataset_name=my_dataset, ans=predict, model_name='K Means Clustering', first_col=result)
-
-
-#----------------------------------Hierarchical Clustering---------------------------------------------------
-
-
-@app.route('/unsupervised/hierarchical/hierarchical')
-def hierarchical1():
-    return render_template('/unsupervised/hierarchical/hierarchical.html')
-
-
-@app.route('/unsupervised/hierarchical/hierarchical',  methods=['GET', 'POST'])
-def hierarchical():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        ncluster = int(request.form['ncluster'])
-        
-        
-        
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :].values
-       
-        
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X = sc.fit_transform(X)
-            
-        # Using the dendrogram to find the optimal number of clusters
-        from matplotlib import pyplot as plt
-        import scipy.cluster.hierarchy as sch
-        dendrogram = sch.dendrogram(sch.linkage(X, method = 'ward'))
-        plt.title('Dendrogram')
-        plt.xlabel('Customers')
-        plt.ylabel('Euclidean distances')
-        
-
-        
-        fig = plt.gcf()
-        img_name1 = 'dendogram'
-        fig.savefig('static/kmeans/plot/dendogram.png', dpi=1500)
-        #elbow_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name1)
-        elbow_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name1)
-        plt.clf()
-        # Fitting Hierarchical Clustering to the dataset
-        from sklearn.cluster import AgglomerativeClustering
-        hc = AgglomerativeClustering(n_clusters = ncluster, affinity = 'euclidean', linkage = 'ward')
-        y_hc = hc.fit_predict(X)
-        
-        from scipy.cluster.hierarchy import dendrogram, linkage
-        import numpy as np
-        Z = linkage(X, 'ward')
-        from scipy.cluster.hierarchy import cophenet
-        from scipy.spatial.distance import pdist
-
-        c, coph_dists = cophenet(Z, pdist(X))
-        var1= c
-        var2=coph_dists 
-        # Visualising the clusters
-        plt.scatter(X[:,0], X[:,1], s = 100, c = 'black', label = 'Data Distribution')
-        plt.title('Data Distribution before clustering')
-        plt.xlabel('First feature ')
-        plt.ylabel('Second Feature ')
-        plt.legend()
-        fig = plt.gcf()
-        img_name2 = 'beforehierarchical'
-        fig.savefig('static/kmeans/plot/beforehierarchical', dpi=1500)
-        #before_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name2)
-        before_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name2)
-        plt.clf()
-        # Visualising the clusters
-        plt.scatter(X[y_hc == 0, 0], X[y_hc == 0, 1], s = 100, c = 'red', label = 'Cluster 1')
-        plt.scatter(X[y_hc == 1, 0], X[y_hc == 1, 1], s = 100, c = 'blue', label = 'Cluster 2')
-        plt.scatter(X[y_hc == 2, 0], X[y_hc == 2, 1], s = 100, c = 'green', label = 'Cluster 3')
-        plt.scatter(X[y_hc == 3, 0], X[y_hc == 3, 1], s = 100, c = 'cyan', label = 'Cluster 4')
-        plt.scatter(X[y_hc == 4, 0], X[y_hc == 4, 1], s = 100, c = 'magenta', label = 'Cluster 5')
-        plt.title('Data Distribution after clustering')
-        plt.xlabel('first Feature')
-        plt.ylabel('second feature')
-        plt.legend()
-        fig = plt.gcf()
-        img_name3 = 'afterhierarchical'
-        fig.savefig('static/kmeans/plot/afterhierarchical.png', dpi=1500)
-        #f.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f.filename)))
-        after_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name3)
-       # Removed from render Template for Heroku
-        #visualize1=elbow_plot,visualize2=before_plot, 
-        plt.clf()
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(kmeans,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/unsupervised/hierarchical/hierarchicaloutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=var1,
-                               var2=var2, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), 
-                               visualize3=after_plot, dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Hierarchical clustering prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/unsupervised/hierarchical/hierarchicaloutput',  methods=['GET', 'POST'])
-def hierarchicalPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :].values
-        
-
-        # Feature Scaling
-        if data_std == "yes":
-            # standardizing the data
-            from sklearn.preprocessing import StandardScaler
-            scaler = StandardScaler()
-            X = scaler.fit_transform(X)
-       # Fitting Hierarchical Clustering to the dataset
-        from sklearn.cluster import AgglomerativeClustering
-        hc = AgglomerativeClustering(n_clusters = 5, affinity = 'euclidean', linkage = 'ward')
-        y_hc = hc.fit_predict(X)
-         
-        predict= hc.predict([[num1,num2]])
-        print(predict)
-        if predict==[0]:
-            result="Customer is careless"
-
-        elif predict==[1]:
-            result="Customer is standard"
-        elif predict==[2]:
-           result="Customer is Target"
-        elif predict==[3]:
-            result="Customer is careful"
-
-        else:
-            result="Custmor is sensible" 
-       
-        return render_template('/unsupervised/hierarchical/hierarchicalpredicted.html', dataset_name=my_dataset, ans=predict, model_name='hierarchical clustering', first_col=result)
-
-
-#-------------------------DBSCAN CLUSTERING---------------------------------------------------------
-
-
-
-
-@app.route('/unsupervised/dbscan/dbscan')
-def dbscan1():
-    return render_template('/unsupervised/dbscan/dbscan.html')
-
-
-@app.route('/unsupervised/dbscan/dbscan',  methods=['GET', 'POST'])
-def dbscan():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :].values
-       
-        
-
-        # Feature Scaling
-        if data_std == "yes":
-            from sklearn.preprocessing import StandardScaler
-            sc = StandardScaler()
-            X = sc.fit_transform(X)
-            
-        from sklearn.neighbors import NearestNeighbors
-        neigh = NearestNeighbors(n_neighbors=3)
-        nbrs = neigh.fit(X)
-        distances, indices = nbrs.kneighbors(X)
-        var1=distances 
-        distances = np.sort(distances, axis=0)
-        distances1 = distances[:,1]
-        
-        from matplotlib import pyplot as plt
-        plt.plot(distances1)
-        plt.title('identification of optimal eps')
-        plt.xlabel('data point indices')
-        plt.ylabel('minimum distance')
-        plt.legend()
-        
-
-        
-        fig = plt.gcf()
-        img_name1 = 'eps'
-        fig.savefig('static/kmeans/plot/eps.png', dpi=1500)
-        #elbow_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name1)
-        elbow_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name1)
-        plt.clf()
-        # define the model
-        from sklearn.cluster import DBSCAN
-        model = DBSCAN(eps=5, min_samples=3, metric='euclidean')
-        # fit model and predict clusters
-        y_hc = model.fit(X)
-        labels=model.labels_
-        
-        var2=model.core_sample_indices_
-        var3=model.components_
-        
-        # Visualising the clusters
-        plt.scatter(X[:,0], X[:,1], s = 100, c = 'black', label = 'Data Distribution')
-        plt.title('Data Distribution before clustering')
-        plt.xlabel('First feature ')
-        plt.ylabel('Second Feature ')
-        plt.legend()
-        fig = plt.gcf()
-        img_name2 = 'beforedbscan'
-        fig.savefig('static/kmeans/plot/beforedbscan.png', dpi=1500)
-        #before_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name2)
-        before_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name2)
-        plt.clf()
-        y_pred = model.fit_predict(X)
-        plt.scatter(X[:,0], X[:,1],c=y_pred, cmap='Paired', label = 'Clusters')
-        plt.title('Students segmenation')
-        plt.xlabel('Btech Aggregate')
-        plt.ylabel('Final performance')
-        plt.legend()
-        
-        plt.title('Data Distribution after clustering')
-        plt.xlabel('first Feature')
-        plt.ylabel('second feature')
-        plt.legend()
-        fig = plt.gcf()
-        img_name3 = 'afterdbscan'
-        fig.savefig('static/kmeans/plot/afterdbscan.png', dpi=1500)
-        #f.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f.filename)))
-        after_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name3)
-        print(after_plot)
-        plt.clf()
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(kmeans,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/unsupervised/dbscan/dbscanoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=var1,
-                               var2=var2,var3=var3, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), visualize1=elbow_plot,visualize2=before_plot, 
-                               visualize3=after_plot, dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------DBSCAN clustering prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/unsupervised/dbscan/dbscanoutput',  methods=['GET', 'POST'])
-def dbscanPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :].values
-        
-
-        # Feature Scaling
-        if data_std == "yes":
-            # standardizing the data
-            from sklearn.preprocessing import StandardScaler
-            scaler = StandardScaler()
-            X = scaler.fit_transform(X)
-       # define the model
-        from sklearn.cluster import DBSCAN
-        model = DBSCAN(eps=5, min_samples=3, metric='euclidean')
-        # fit model and predict clusters
-        y_hc = model.fit(X)
-         
-        predict= model.fit_predict([[num1,num2]])
-        print(predict)
-        if predict==[0]:
-            result="Customer is careless"
-
-        elif predict==[1]:
-            result="Customer is standard"
-        elif predict==[2]:
-           result="Customer is Target"
-        elif predict==[3]:
-            result="Customer is careful"
-
-        else:
-            result="Custmor is sensible" 
-       
-        return render_template('/unsupervised/dbscan/dbscanpredicted.html', dataset_name=my_dataset, ans=predict, model_name='hierarchical clustering', first_col=result)
-
-
-#----------------------------------------------Feature Engineering and Feature selection------------------------------------
-
-
-@app.route('/feature')
-def feature():
-    return render_template('/feature/feature.html')
-
-
-
-#----------------------------------------------PCA---------------------------------------
-
-@app.route('/feature/pca/pca')
-def pca1():
-    return render_template('/feature/pca/pca.html')
-
-
-@app.route('/feature/pca/pca',  methods=['GET', 'POST'])
-def pca():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['classification']
-        ncomponenets=int(request.form['ncomponents'])
-        print(ncomponenets)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        
-        from sklearn.preprocessing import StandardScaler
-        sc = StandardScaler()
-        X_train = sc.fit_transform(X_train)
-        X_test = sc.transform(X_test)
-        # Applying PCA
-        from sklearn.decomposition import PCA
-        pca = PCA(n_components = None)
-        X_train = pca.fit_transform(X_train)
-        X_test = pca.transform(X_test)
-        explained_variance = pca.explained_variance_ratio_
-        var5=explained_variance
-        # Applying PCA
-        from sklearn.decomposition import PCA
-        pca1 = PCA(n_components = ncomponenets)
-        X_train = pca1.fit_transform(X_train)
-        X_test = pca1.transform(X_test)
-        explained_variance = pca1.explained_variance_ratio_
-        var6=explained_variance
-       # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(pca1,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/feature/pca/pcaoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,var5=var5, var6=var6, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Support Vector Machine Classification prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/feature/pca/pcaoutput',  methods=['GET', 'POST'])
-def pcaPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        
-        from sklearn.preprocessing import StandardScaler
-        sc = StandardScaler()
-        X_train = sc.fit_transform(X_train)
-        X_test = sc.transform(X_test)
-       
-        # Applying PCA
-        from sklearn.decomposition import PCA
-        pca = PCA(n_components = 2)
-        X_train = pca.fit_transform(X_train)
-        X_test = pca.transform(X_test)
-        explained_variance = pca.explained_variance_ratio_
-        var6=explained_variance
-       # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        classifier.fit(X_train, y_train)
-        
-        output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/feature/pca/pcapredicted.html', dataset_name=my_dataset, ans=prediction, model_name='PCA', first_col=num1, second_col=num2, third_col=prediction)
-
-#-------------------------------------------------------------------LDA----
-
-
-
-@app.route('/feature/lda/lda')
-def lda1():
-    return render_template('/feature/lda/lda.html')
-
-
-@app.route('/feature/lda/lda',  methods=['GET', 'POST'])
-def lda():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['flexRadioDefault1']
-        print(class_type)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        
-        from sklearn.preprocessing import StandardScaler
-        sc = StandardScaler()
-        X_train = sc.fit_transform(X_train)
-        X_test = sc.transform(X_test)
-        # Applying LDA
-        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-        lda = LDA(n_components =None)
-        X_train = lda.fit_transform(X_train, y_train)
-        X_test = lda.transform(X_test)
-        explained_variance = lda.explained_variance_ratio_
-        var5=explained_variance
-       
-        if class_type == "multiclass":
-            # Applying LDA
-            from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-            lda = LDA(n_components = 2)
-            X_train = lda.fit_transform(X_train, y_train)
-            X_test = lda.transform(X_test)
-            var6=explained_variance
-        else:
-           from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-           lda = LDA(n_components = 1)
-           X_train = lda.fit_transform(X_train, y_train)
-           X_test = lda.transform(X_test)
-           var6=explained_variance
-        
-       # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        # Making the Confusion Matrix
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(lda,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/feature/lda/ldaoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,var5=var5, var6=var6, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#-------------------------------Support Vector Machine Classification prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/feature/lda/ldaoutput',  methods=['GET', 'POST'])
-def ldaPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/4, random_state=42)
-
-        # Feature Scaling
-        
-        from sklearn.preprocessing import StandardScaler
-        sc = StandardScaler()
-        X_train = sc.fit_transform(X_train)
-        X_test = sc.transform(X_test)
-       
-        # Applying LDA
-        from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-        lda = LDA(n_components = 2)
-        X_train = lda.fit_transform(X_train, y_train)
-        X_test = lda.transform(X_test)
-
-       # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        classifier.fit(X_train, y_train)
-        
-        output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/feature/lda/ldapredicted.html', dataset_name=my_dataset, ans=prediction, model_name='LDA', first_col=num1, second_col=num2, third_col=prediction)
-
-
-#-------------------------------------Feature selection Filter Based Method----
-
-
-
-@app.route('/feature/filter/filter')
-def filter1():
-    return render_template('/feature/filter/filter.html')
-
-
-@app.route('/feature/filter/filter',  methods=['GET', 'POST'])
-def filter2():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['flexRadioDefault1']
-        selection_method=request.form['flexRadio']
-        
-        print(class_type)
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(df.drop(cols[-1], axis=1), 
-                                                  df[cols[-1]], test_size=0.3, 
-                                                 random_state=0)
-
-        
-        
-        # Applying feature selection
-        # import and create the VarianceThreshold object.
-        from sklearn.feature_selection import VarianceThreshold
-        vs_constant = VarianceThreshold(threshold=0)
-
-        # select the numerical columns only.
-        numerical_x_train = X_train[X_train.select_dtypes([np.number]).columns]
-
-        # fit the object to our data.
-        vs_constant.fit(numerical_x_train)
-
-        # get the constant colum names.
-        constant_columns = [column for column in numerical_x_train.columns
-                    if column not in numerical_x_train.columns[vs_constant.get_support()]]
-
-        # detect constant categorical variables.
-        constant_cat_columns = [column for column in X_train.columns 
-                        if (X_train[column].dtype == "O" and len(X_train[column].unique())  == 1 )]
-
-        # conctenating the two lists.
-        all_constant_columns = constant_cat_columns + constant_columns
-        var5=all_constant_columns
-        # drop the constant columns
-        X_train.drop(labels=all_constant_columns, axis=1, inplace=True)
-        X_test.drop(labels=all_constant_columns, axis=1, inplace=True)
-        threshold = 0.80
-
-        # create empty list
-        quasi_constant_feature = []
-
-            # loop over all the columns
-        for feature in X_train.columns:
-
-            # calculate the ratio.
-            predominant = (X_train[feature].value_counts() / np.float(len(X_train))).sort_values(ascending=False).values[0]
-    
-            # append the column name if it is bigger than the threshold
-            if predominant >= threshold:
-                quasi_constant_feature.append(feature)   
-        
-        var6= quasi_constant_feature
-        # drop the quasi constant columns
-        X_train.drop(labels=quasi_constant_feature, axis=1, inplace=True)
-        X_test.drop(labels=quasi_constant_feature, axis=1, inplace=True)
-        
-        # transpose the feature matrice
-        train_features_T = X_train.T
-
-        # print the number of duplicated features
-        
-
-        # select the duplicated features columns names
-        duplicated_columns = train_features_T[train_features_T.duplicated()].index.values
-        var2=duplicated_columns
-        # drop those columns
-        X_train.drop(labels=duplicated_columns, axis=1, inplace=True)
-        X_test.drop(labels=duplicated_columns, axis=1, inplace=True)
-        
-        # creating set to hold the correlated features
-        corr_features = set()
-
-        # create the correlation matrix (default to pearson)
-        corr_matrix = X_train.corr()
-
-        
-
-        for i in range(len(corr_matrix .columns)):
-            for j in range(i):
-                if abs(corr_matrix.iloc[i, j]) > 0.5:
-                    colname = corr_matrix.columns[i]
-                    corr_features.add(colname)
-
-        var3=corr_features
-        print(var3)            
-        X_train.drop(labels=corr_features, axis=1, inplace=True)
-        X_test.drop(labels=corr_features, axis=1, inplace=True)
-        if selection_method == "pearson":
-            # pearson's correlation feature selection for numeric input and numeric output
-            from sklearn.datasets import make_regression
-            from sklearn.feature_selection import SelectKBest
-            from sklearn.feature_selection import f_regression
-            
-            
-            # define feature selection
-            fs = SelectKBest(score_func=f_regression, k=4)
-            # apply feature selection
-            X_selected = fs.fit_transform(X_train, y_train)
-            X_test= fs.transform(X_test)
-           
-            var4= X_selected[1].shape
-            
-        elif selection_method == "annova":
-            # pearson's correlation feature selection for numeric input and numeric output
-            from sklearn.datasets import make_regression
-            from sklearn.feature_selection import SelectKBest
-            from sklearn.feature_selection import f_classif
-            # define feature selection
-            fs = SelectKBest(score_func=f_classif, k=4)
-            # apply feature selection
-            X_selected = fs.fit_transform(X_train, y_train)
-            X_test= fs.transform(X_test)
-            var4= X_selected[1].shape
-        else :
-            # pearson's correlation feature selection for numeric input and numeric output
-            from sklearn.datasets import make_regression
-            from sklearn.feature_selection import SelectKBest
-            from sklearn.feature_selection import mutual_info_classif
-            # define feature selection
-            fs = SelectKBest(score_func=mutual_info_classif, k=4)
-            # apply feature selection
-            X_selected = fs.fit_transform(X_train, y_train)
-            X_test= fs.transform(X_test)
-           
-            var4= X_selected[1].shape
-            
-       
-        
-        # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        classifier.fit(X_selected, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        #print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
-    
-        return render_template('/feature/filter/filteroutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=var2,var3=var3, var4=var4,var5=var5, var6=var6, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-#------------------------------- Classification after feature selection prediction(Specific dataset)-------------------------------------------
-        
-@app.route('/feature/filter/filteroutput',  methods=['GET', 'POST'])
-def filterPred():
-    if request.method == 'POST':
-        num1 = request.form['num1']
-        num2 = request.form['num2']
-        
-        my_dataset = request.form['my_dataset']
-        data_std = request.form['flexRadioDefault']
-        selection_method=request.form['flexRadio']
-       
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        li = list(df.columns)
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        X_train, X_test, y_train, y_test = train_test_split(df.drop(cols[-1], axis=1), 
-                                                  df[cols[-1]], test_size=0.3, 
-                                                 random_state=0)
-
-        
-        
-        # Applying feature selection
-        # import and create the VarianceThreshold object.
-        from sklearn.feature_selection import VarianceThreshold
-        vs_constant = VarianceThreshold(threshold=0)
-
-        # select the numerical columns only.
-        numerical_x_train = X_train[X_train.select_dtypes([np.number]).columns]
-
-        # fit the object to our data.
-        vs_constant.fit(numerical_x_train)
-
-        # get the constant colum names.
-        constant_columns = [column for column in numerical_x_train.columns
-                    if column not in numerical_x_train.columns[vs_constant.get_support()]]
-
-        # detect constant categorical variables.
-        constant_cat_columns = [column for column in X_train.columns 
-                        if (X_train[column].dtype == "O" and len(X_train[column].unique())  == 1 )]
-
-        # conctenating the two lists.
-        all_constant_columns = constant_cat_columns + constant_columns
-        var5=all_constant_columns
-        # drop the constant columns
-        X_train.drop(labels=all_constant_columns, axis=1, inplace=True)
-        X_test.drop(labels=all_constant_columns, axis=1, inplace=True)
-        threshold = 0.80
-
-        # create empty list
-        quasi_constant_feature = []
-
-            # loop over all the columns
-        for feature in X_train.columns:
-
-            # calculate the ratio.
-            predominant = (X_train[feature].value_counts() / np.float(len(X_train))).sort_values(ascending=False).values[0]
-    
-            # append the column name if it is bigger than the threshold
-            if predominant >= threshold:
-                quasi_constant_feature.append(feature)   
-        
-        var6= quasi_constant_feature
-        # drop the quasi constant columns
-        X_train.drop(labels=quasi_constant_feature, axis=1, inplace=True)
-        X_test.drop(labels=quasi_constant_feature, axis=1, inplace=True)
-        
-        # transpose the feature matrice
-        train_features_T = X_train.T
-
-        # print the number of duplicated features
-        
-
-        # select the duplicated features columns names
-        duplicated_columns = train_features_T[train_features_T.duplicated()].index.values
-        var2=duplicated_columns
-        # drop those columns
-        X_train.drop(labels=duplicated_columns, axis=1, inplace=True)
-        X_test.drop(labels=duplicated_columns, axis=1, inplace=True)
-        
-        # creating set to hold the correlated features
-        corr_features = set()
-
-        # create the correlation matrix (default to pearson)
-        corr_matrix = X_train.corr()
-
-        
-
-        for i in range(len(corr_matrix .columns)):
-            for j in range(i):
-                if abs(corr_matrix.iloc[i, j]) > 0.5:
-                    colname = corr_matrix.columns[i]
-                    corr_features.add(colname)
-
-        var3=corr_features
-        print(var3)            
-        X_train.drop(labels=corr_features, axis=1, inplace=True)
-        X_test.drop(labels=corr_features, axis=1, inplace=True)
-        if selection_method == "pearson":
-            # pearson's correlation feature selection for numeric input and numeric output
-            from sklearn.datasets import make_regression
-            from sklearn.feature_selection import SelectKBest
-            from sklearn.feature_selection import f_regression
-            
-            
-            # define feature selection
-            fs = SelectKBest(score_func=f_regression, k=2)
-            # apply feature selection
-            X_selected = fs.fit_transform(X_train, y_train)
-            X_test= fs.transform(X_test)
-           
-            var4= X_selected[1].shape
-            
-        elif selection_method == "annova":
-            # pearson's correlation feature selection for numeric input and numeric output
-            from sklearn.datasets import make_regression
-            from sklearn.feature_selection import SelectKBest
-            from sklearn.feature_selection import f_classif
-            # define feature selection
-            fs = SelectKBest(score_func=f_classif, k=2)
-            # apply feature selection
-            X_selected = fs.fit_transform(X_train, y_train)
-            X_test= fs.transform(X_test)
-            var4= X_selected[1].shape
-        else :
-            # pearson's correlation feature selection for numeric input and numeric output
-            from sklearn.datasets import make_regression
-            from sklearn.feature_selection import SelectKBest
-            from sklearn.feature_selection import mutual_info_classif
-            # define feature selection
-            fs = SelectKBest(score_func=mutual_info_classif, k=2)
-            # apply feature selection
-            X_selected = fs.fit_transform(X_train, y_train)
-            X_test= fs.transform(X_test)
-           
-            var4= X_selected[1].shape
-            
-       
-        
-        # Fitting SVM to the Training set
-        from sklearn.svm import SVC
-        classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        classifier.fit(X_selected, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        output = classifier.predict([[num1,num2]])
-        if output==[1]:
-            prediction="Item will be purchased"
-        else:
-            prediction="Item will not be purchased"
-        
-       
-        return render_template('/feature/filter/filterpredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Classification based on Feature selection', first_col=num1, second_col=num2, third_col=prediction)
-
-
-
-#-----------------Feature selection Wrapper method-----------------------------------
-
-@app.route('/feature/wrapper/wrapper')
-def wrapper1():
-    return render_template('/feature/wrapper/wrapper.html')
-
-
-@app.route('/feature/wrapper/wrapper',  methods=['GET', 'POST'])
-def wrapper2():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        data_std = request.form['flexRadioDefault']
-        class_type=request.form['flexRadioDefault1']
-        selection_method=request.form['flexRadio']
-        
-        
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        df = pd.read_csv(get_dataset)
-        df = df.fillna(method='ffill')
-        col_no = df.shape[1]
-
-        cols = df.columns
-        num_cols = df._get_numeric_data().columns
-        cat_col=list(set(cols) - set(num_cols)) 
-
-
-        temp = 0
-        labelencoder = LabelEncoder()
-        # taking care of cataagorical data
-        for i in df.columns:
-            for x in cat_col:
-                if x==i:
-                    df.iloc[:, temp] = labelencoder.fit_transform(df.iloc[:, temp])
-            temp = temp + 1
-        #df = df.fillna(method='ffill')
-        #li = list(df.columns)
-        X = df.iloc[:, :-1].values
-        y = df.iloc[:, -1].values
-        # Splitting the dataset into the Training set and Test set
-        from sklearn.model_selection import train_test_split
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 5)
-        from mlxtend.feature_selection import SequentialFeatureSelector
-
-        # import the algorithm you want to evaluate on your features.
-        from sklearn.ensemble import RandomForestClassifier
-        from sklearn.datasets import make_regression
-        
-        
-        if selection_method == "forward":
-            # create the SequentialFeatureSelector object, and configure the parameters.
-            sfs = SequentialFeatureSelector(RandomForestClassifier(), 
-                                            k_features=5, 
-                                            forward=True, 
-                                            floating=False,
-                                            scoring='accuracy',
-                                            cv=2)
-
-            # fit the object to the training data.
-            sfs = sfs.fit(X_train, y_train)
-
-            # print the selected features.
-            selected_features = X_train[list(sfs.k_feature_idx_)]
-            var5= sfs.k_feature_names_
-
-            # print the final prediction score.
-            var6= sfs.k_score_
-
-            # transform to the newly selected features.
-            x_train_sfs = sfs.transform(X_train)
-            import pickle 
-            # Save the trained model as a pickle string. 
-            saved_model=pickle.dump(sfs,open("static/data-preprocess/model/model.pkl", 'wb'))
-
-        elif selection_method == "backward":
-            # create the SequentialFeatureSelector object, and configure the parameters.
-            sfs = SequentialFeatureSelector(RandomForestClassifier(), 
-                                            k_features=5, 
-                                            forward=False, 
-                                            floating=False,
-                                            scoring='accuracy',
-                                            cv=2)
-
-            # fit the object to the training data.
-            sfs = sfs.fit(X_train, y_train)
-
-            # print the selected features.
-            selected_features = X_train[list(sfs.k_feature_idx_)]
-            var5= sfs.k_feature_names_
-
-            # print the final prediction score.
-            var6= sfs.k_score_
-
-            # transform to the newly selected features.
-            X_train_sfs = sfs.transform(X_train)
-            import pickle 
-            # Save the trained model as a pickle string. 
-            saved_model=pickle.dump(sfs,open("static/data-preprocess/model/model.pkl", 'wb'))
-            
-        else :
-            from mlxtend.feature_selection import ExhaustiveFeatureSelector
-           
-            # import the algorithm you want to evaluate on your features.
-            from sklearn.ensemble import RandomForestClassifier
-
-            # create the ExhaustiveFeatureSelector object.
-            efs = ExhaustiveFeatureSelector(RandomForestClassifier(), 
-                                            min_features=2,
-                                            max_features=6, 
-                                            scoring='roc_auc',
-                                            cv=2)
-
-            # fit the object to the training data.
-            efs = efs.fit(X_train, y_train)
-
-            # print the selected features.
-            selected_features = X_train[list(efs.best_idx_ )]
-            var5 = selected_features
-
-            # print the final prediction score.
-            var6= efs.best_score_
-
-            # transform our data to the newly selected features.
-            x_train_sfs = efs.transform(X_train)
-            x_test_sfs = efs.transform(X_test)
-            import pickle 
-            # Save the trained model as a pickle string. 
-            saved_model=pickle.dump(efs,open("static/data-preprocess/model/model.pkl", 'wb'))
-           
-        
-        # Fitting SVM to the Training set
-        #from sklearn.svm import SVC
-        #classifier = SVC(kernel = 'sigmoid', random_state = 0,probability=True)
-        #classifier.fit(x_train_sfs, y_train)
-        # Predicting the Test set results
-        #y_pred = classifier.predict(x_train_sfs)
-        #Accuracy= accuracy_score(y_train, y_pred)*100
-        #print(Accuracy)
-        #from sklearn.metrics import precision_score
-        #from sklearn.metrics import recall_score
-        #from sklearn.metrics import f1_score
-        #if class_type == "binary":
-           # precision = precision_score(y_test, y_pred, average='binary')
-           # recall = recall_score(y_test, y_pred, average='binary')
-            #score = f1_score(y_test, y_pred, average='binary')
-        #precision = precision_score(y_test, y_pred, average='macro')
-        #recall = recall_score(y_test, y_pred, average='macro')
-        #score = f1_score(y_test, y_pred, average='macro')
-       # ) 
-    
-        return render_template('/feature/wrapper/wrapperoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,
-                               var5=var5, var6=var6, data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-
-
-#-----------------Aprori Algorithm-----------------------------------
-
-@app.route('/unsupervised/apriori/apriori')
-def apriori1():
-    return render_template('/unsupervised/apriori/apriori.html')
-
-
-@app.route('/unsupervised/apriori/apriori',  methods=['GET', 'POST'])
-def apriori2():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        minimum_support= float(request.form['support'])
-        minimum_confidence=float(request.form['confidence'])
-        
-        
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        # Importing the libraries
-        import pandas as pd
-        import numpy as np
-        from mlxtend.frequent_patterns import apriori, association_rules
-        import matplotlib.pyplot as plt
-        dataset = pd.read_csv(get_dataset, nrows=1000)
-        #Count total number of classes in Data
-        items = (dataset['0'].unique())
-        var1=items
-        #Create list 
-        transactions = []
-        
-        for i in range(0, dataset.shape[0]):
-            transactions.append([str(dataset.values[i,j]) for j in range(0, dataset.shape[1])])
-        
-        
-        import pandas as pd
-        from mlxtend.preprocessing import TransactionEncoder
-        te = TransactionEncoder()
-        te_ary = te.fit(transactions).transform(transactions)
-        df = pd.DataFrame(te_ary, columns=te.columns_)
-        df=df.drop(['nan'], axis = 1)
-        freq_items = apriori(df, min_support=minimum_support, use_colnames=True)
-        var2=freq_items
-        rules = association_rules(freq_items, metric="confidence", min_threshold=minimum_confidence)
-        var3=rules
-        import pickle 
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(freq_items,open("static/data-preprocess/model/model.pkl", 'wb'))
-           
-        
-      
-    
-        return render_template('/unsupervised/apriori/apriorioutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,
-                               var1=var1, var2=var2.to_html( classes='table table-striped table-dark table-hover x'),var3=var3.to_html( classes='table table-striped table-dark table-hover x'), data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-
-
-#-----------------FP Growth Algorithm-----------------------------------
-
-@app.route('/unsupervised/fp/fp')
-def fp1():
-    return render_template('/unsupervised/fp/fp.html')
-
-
-@app.route('/unsupervised/fp/fp',  methods=['GET', 'POST'])
-def fp():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        minimum_support= float(request.form['support'])
-        minimum_confidence=float(request.form['confidence'])
-        
-        
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        # Importing the libraries
-        import pandas as pd
-        import numpy as np
-        from mlxtend.frequent_patterns import apriori, association_rules
-        from mlxtend.frequent_patterns import fpgrowth
-        import matplotlib.pyplot as plt
-        dataset = pd.read_csv(get_dataset,nrows=1000)
-        #Count total number of classes in Data
-        items = (dataset['0'].unique())
-        var1=items
-        #Create list 
-        transactions = []
-        
-        for i in range(0, dataset.shape[0]):
-            transactions.append([str(dataset.values[i,j]) for j in range(0, dataset.shape[1])])
-        
-        
-        import pandas as pd
-        from mlxtend.preprocessing import TransactionEncoder
-        te = TransactionEncoder()
-        te_ary = te.fit(transactions).transform(transactions)
-        df = pd.DataFrame(te_ary, columns=te.columns_)
-        df=df.drop(['nan'], axis = 1)
-        freq_items = fpgrowth(df, min_support=minimum_support, use_colnames=True)
-        var2=freq_items
-        rules = association_rules(freq_items, metric="confidence", min_threshold=minimum_confidence)
-        var3=rules
-        import pickle 
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(freq_items,open("static/data-preprocess/model/model.pkl", 'wb'))
-           
-        
-      
-    
-        return render_template('/unsupervised/fp/fpoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,
-                               var1=var1, var2=var2.to_html( classes='table table-striped table-dark table-hover x'),var3=var3.to_html( classes='table table-striped table-dark table-hover x'), data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
-
-
-
-
-#-----------------Natural language processing-----------------------------------
-
-@app.route('/nlp')
-def nlp():
-    return render_template('/nlp/nlp.html')
-
-
-#----------------------Sentiment Analysis------------------------------
-
-
-@app.route('/nlp/sentiment/sentiment')
-def sentiment1():
-    return render_template('/nlp/sentiment/sentiment.html')
-
-
-@app.route('/nlp/sentiment/sentiment',  methods=['GET', 'POST'])
-def sentiment():
-    if request.method == 'POST':
-        my_dataset = request.files['my_dataset']
-        my_model_name = request.form['name_of_model1']
-        
-        class_type=request.form['classification']
-        dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        my_dataset.save(dataset_path)
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
         input=secure_filename(my_dataset.filename)
-        extension= input.split(".")
-        extension=extension[1]
         
-        if extension == "csv":
-            df = pd.read_csv(get_dataset)
-        else:
-            #target=df.iloc[:,-1].values
-            #print(target)
-            df = pd.read_csv(get_dataset, delimiter="\t", quoting=3,nrows=1000)
-        # Cleaning the texts for all review using for loop
-        df = df.dropna()
-        #target=df.iloc[:,-1].values
-        #df.reset_index(inplace = True) 
-        #df = df.drop(['index'], axis = 1) 
-        import re
-        import nltk
-        nltk.download('stopwords')
-        from nltk.corpus import stopwords
-        from nltk.stem.porter import PorterStemmer
-        corpus = []
-        for i in range(0, df.shape[0]):
-            review = re.sub('[^a-zA-Z]', ' ', df.iloc[:,0][i])
-            review = review.lower()
-            review = review.split()
-            ps = PorterStemmer()
-            review = [ps.stem(word) for word in review if not word in set(stopwords.words('english'))]
-            review = ' '.join(review)
-            corpus.append(review)
-       
-        # Creating the Bag of Words model
-        from sklearn.feature_extraction.text import CountVectorizer
-        cv = CountVectorizer(max_features = 1500)
+        
+        # Make prediction
+        preds = model_predict_breed(get_dastaset, model_breed)
 
-        X = cv.fit_transform(corpus).toarray()
+        pred_class = decode_predictions(preds, top=1)   # ImageNet Decode
+        result = str(pred_class[0][0][1])               # Convert to string
+
+        return render_template('/ann/breed/breedoutput.html', model_name=my_model_name,my_dataset=my_dataset, pred=result, visualize=input )
+#-----------------------Character Recognition---------------------------------------------
+model_char = load_model("static/data-preprocess/model/alphabet.h5")
+
+def predict_char(image_data):
+  
+  test_image = image.load_img(image_data, target_size = (32,32))
+  test_image = image.img_to_array(test_image)
+  test_image = np.expand_dims(test_image, axis = 0)
+  result = model_char.predict(test_image)
+  result = get_result(result)
+  return result
+  
+def get_result(result):
+    if result[0][0] == 1:
+        return('a')
+    elif result[0][1] == 1:
+        return ('b')
+    elif result[0][2] == 1:
+        return ('c')
+    elif result[0][3] == 1:
+        return ('d')
+    elif result[0][4] == 1:
+        return ('e')
+    elif result[0][5] == 1:
+        return ('f')
+    elif result[0][6] == 1:
+        return ('g')
+    elif result[0][7] == 1:
+        return ('h')
+    elif result[0][8] == 1:
+        return ('i')
+    elif result[0][9] == 1:
+        return ('j')
+    elif result[0][10] == 1:
+        return ('k')
+    elif result[0][11] == 1:
+        return ('l')
+    elif result[0][12] == 1:
+        return ('m')
+    elif result[0][13] == 1:
+        return ('n')
+    elif result[0][14] == 1:
+        return ('o')
+    elif result[0][15] == 1:
+        return ('p')
+    elif result[0][16] == 1:
+        return ('q')
+    elif result[0][17] == 1:
+        return ('r')
+    elif result[0][18] == 1:
+        return ('s')
+    elif result[0][19] == 1:
+        return ('t')
+    elif result[0][20] == 1:
+        return ('u')
+    elif result[0][21] == 1:
+        return ('v')
+    elif result[0][22] == 1:
+        return ('w')
+    elif result[0][23] == 1:
+        return ('x')
+    elif result[0][24] == 1:
+        return ('y')
+    elif result[0][25] == 1:
+        return ('z')
+
+@app.route('/ann/character/character')
+def character():
+    return render_template('/ann/character/character.html')
+
+
+@app.route('/ann/character/character',  methods=['GET', 'POST'])
+def character1():
+   
+    if request.method == 'POST':
+        my_dataset = request.files['input_image']
+        my_model_name = request.form['name_of_model']
         
-        y = df.iloc[:,-1].values
+        dataset_path = os.path.join(pathfordataset, secure_filename(my_dataset.filename))
+        my_dataset.save(dataset_path)
         
-        # Splitting the dataset into the Training set and Test set
-        from sklearn.model_selection import train_test_split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename(my_dataset.filename))
+        
+        input=secure_filename(my_dataset.filename)
+        
+        
+        # Make prediction
+        preds = predict_char(get_dastaset)
 
         
 
-        
-        
-        # Fitting Naive Bayes to the Training set
-        from sklearn.naive_bayes import GaussianNB
-        classifier = GaussianNB()
-        classifier.fit(X_train, y_train)
-        # Predicting the Test set results
-        y_pred = classifier.predict(X_test)
-        
-           
-        
-        
-        Accuracy= accuracy_score(y_test, y_pred)*100
-        print(Accuracy)
-        from sklearn.metrics import precision_score
-        from sklearn.metrics import recall_score
-        from sklearn.metrics import f1_score
-        if class_type == "binary":
-            precision = precision_score(y_test, y_pred, average='binary')
-            recall = recall_score(y_test, y_pred, average='binary')
-            score = f1_score(y_test, y_pred, average='binary')
-        else:
-            precision = precision_score(y_test, y_pred, average='macro')
-            recall = recall_score(y_test, y_pred, average='macro')
-            score = f1_score(y_test, y_pred, average='macro')
-        import pickle 
-        print("[INFO] Saving model...")
-        # Save the trained model as a pickle string. 
-        saved_model=pickle.dump(classifier,open("static/data-preprocess/model/model.pkl", 'wb')) 
+        return render_template('/ann/character/characteroutput.html', model_name=my_model_name,my_dataset=my_dataset, pred=preds, visualize=input )
     
-        return render_template('/nlp/sentiment/sentimentoutput.html', dataset_name=my_dataset.filename, model_name=my_model_name,var1=Accuracy,
-                               var2=precision,var3=recall, var4=score,  data_shape=df.shape, table=df.head(5).to_html( classes='table table-striped table-dark table-hover x'), dataset_describe=df.describe().to_html(classes='table table-striped table-dark table-hover x'))
+#------------------------------Convolution  Neural network-------------------------------------------
 
-#-------------------------------Sentiment Analysis prediction(Specific dataset)-------------------------------------------
+
+@app.route('/cnn')
+def cnn():
+    return render_template('/cnn/cnn.html')
+
+#------------------------------Face Recognition-------------------------------------------
+model_face = load_model("static/data-preprocess/model/Facemodel.h5")
+FACE_CLASSES = ['ben_afflek', 'elton_john','jerry_seinfeld','madonna','mindy_kaling']
+def predict_face(image_data):
+  #x = cv2.resize(image_data, (48, 48)) 
+  #img = image.load_img(image_data, target_size=(48, 48))
+  #x = image.img_to_array(img)
+  size=(224, 224)
+  image=ImageOps.fit(image_data, size, Image.ANTIALIAS)
+  img=np.asarray(image)
+  img_reshape=np.expand_dims(img, axis=1)
+  img_reshape=img[np.newaxis,...]
+  features = model_face.predict(img_reshape)
+  
+  label_index=features.argmax()
+  print(label_index)
+  
+  
+  
+  return FACE_CLASSES[label_index]
+
+@app.route('/cnn/face/face')
+def face():
+    return render_template('/cnn/face/face.html')
+
+
+@app.route('/cnn/face/face',  methods=['GET', 'POST'])
+def face1():
+   
+    if request.method == 'POST':
+        input_image = request.files['input_image']
         
-@app.route('/nlp/sentiment/sentimentoutput',  methods=['GET', 'POST'])
-def sentimentPred():
+        my_model_name = request.form['name_of_model']
+        
+        dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
+        input_image.save(dataset_path)
+        
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
+        input=secure_filename(input_image.filename)
+        
+        image=Image.open(input_image)
+        #image=np.array(image)
+        
+        #image=np.array(input_image)
+        preds = predict_face(image)
+
+        
+
+        return render_template('/cnn/face/faceoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
+
+#------------------------------Face Expression Recognition-------------------------------------------
+model_faceexpression = load_model("static/data-preprocess/model/FaceExpressionmodel.h5")
+FACE_CLASSES1 = ['angry', 'disgust','fear','happy','neutral', 'sad', 'surprise']
+def predict_faceexpression(image_data):
+  size=(48, 48)
+  image=ImageOps.fit(image_data, size, Image.ANTIALIAS)
+  img=np.asarray(image)
+  img_reshape=np.expand_dims(img, axis=1)
+  img_reshape=img[np.newaxis,...]
+  features = model_faceexpression.predict(img_reshape)
+  #x = np.expand_dims(x, axis=1)
+  #x = preprocess_input(x)
+  #features = model.predict(x)
+  
+  label_index=features.argmax()
+  
+  
+  return FACE_CLASSES1[label_index]
+
+@app.route('/cnn/faceexpression/faceexpression')
+def faceexpression():
+    return render_template('/cnn/faceexpression/faceexpression.html')
+
+
+@app.route('/cnn/faceexpression/faceexpression',  methods=['GET', 'POST'])
+def faceexpression1():
+   
+    if request.method == 'POST':
+        input_image = request.files['input_image']
+        
+        my_model_name = request.form['name_of_model']
+        
+        dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
+        input_image.save(dataset_path)
+        
+        get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
+        input=secure_filename(input_image.filename)
+        
+        image=Image.open(input_image)
+        #image=np.array(image)
+        
+        #image=np.array(input_image)
+        preds = predict_faceexpression(image)
+
+        
+
+        return render_template('/cnn/faceexpression/faceexpressionoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
+#----------------Object detection----------------------
+import math
+from cv2 import *
+import os
+directory = r'F:\ML\Deep Learning Lab Deployment\static\data-preprocess\new'
+cascade_face = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_frontalface_default.xml') 
+cascade_eye = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_eye.xml') 
+cascade_smile = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_smile.xml')
+def detection(grayscale, img):
+    face = cascade_face.detectMultiScale(grayscale, 1.3, 5)
+    for (x_face, y_face, w_face, h_face) in face:
+        cv2.rectangle(img, (x_face, y_face), (x_face+w_face, y_face+h_face), (255, 130, 0), 2)
+        ri_grayscale = grayscale[y_face:y_face+h_face, x_face:x_face+w_face]
+        ri_color = img[y_face:y_face+h_face, x_face:x_face+w_face] 
+        eye = cascade_eye.detectMultiScale(ri_grayscale, 1.2, 18) 
+        for (x_eye, y_eye, w_eye, h_eye) in eye:
+            cv2.rectangle(ri_color,(x_eye, y_eye),(x_eye+w_eye, y_eye+h_eye), (0, 180, 60), 2) 
+        smile = cascade_smile.detectMultiScale(ri_grayscale, 1.7, 20)
+        for (x_smile, y_smile, w_smile, h_smile) in smile: 
+            cv2.rectangle(ri_color,(x_smile, y_smile),(x_smile+w_smile, y_smile+h_smile), (255, 0, 130), 2)
+    return img 
+@app.route('/object')
+def object():
+    return render_template('/object/object.html')
+
+@app.route('/object/smile/smile')
+def smile():
+    return render_template('/object/smile/smile.html')
+
+@app.route('/object/smile/smile',  methods=['GET', 'POST'])
+def smiledetection():
+    if request.method == 'POST':
+        input_image = request.files['input_image']
+    
+        key = cv2. waitKey(1)
+        webcam = cv2.VideoCapture(0) 
+
+    while True:
+     try:
+        check, frame = webcam.read()
+        print(check) #prints true as long as the webcam is running
+        print(frame) #prints matrix values of each framecd 
+        #cv2.imshow("Capturing", frame)
+        key = cv2.waitKey(1)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        canvas = detection(gray, frame)
+        cv2.imshow('Video is Running. Press S on Keyboard to save Image', canvas)
+        if key == ord('s'): 
+            os.chdir(directory)
+            cv2.imwrite(filename='saved_img.jpg',img=frame)
+            imageoutput = os.path.join(app.config['DFPrNew'], 'saved_img.jpg')
+                     
+            #filename ='F:\ML\Deep Learning Lab Deployment\static\data-preprocess\new\saved_img.jpg'
+            webcam.release()
+            cv2.waitKey(1650)
+            cv2.destroyAllWindows()
+           # print("Processing image...")
+            #img_ = cv2.imread('saved_img.jpg', cv2.IMREAD_ANYCOLOR)
+            #print("Converting RGB image to grayscale...")
+            #gray = cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY)
+            #print("Converted RGB image to grayscale...")
+            #print("Resizing image to 28x28 scale...")
+            #img_ = cv2.resize(gray,(28,28))
+            #print("Resized...")
+            #img_resized = cv2.imwrite(filename='saved_img-final.jpg', img=img_)
+            #print("Image saved!")        
+            break
+        elif key == ord('q'):
+            print("Turning off camera.")
+            imageoutput = os.path.join(app.config['DFPrNew'], 'Deepak Moud.jpg')
+            #imageoutput = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
+            #dataset_path = os.path.join(pathfordatasetNew, secure_filename(input_image.filename))
+            #input_image.save(dataset_path)
+            #dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
+            #print(dataset_path)
+            #input_image.save(dataset_path)
+        
+            #imageoutput = os.path.join(app.config['DFPr'],secure_filename(input_image.filename))
+            #print(imageoutput)
+            #imageoutput=secure_filename(input_image.filename)
+            #imageoutput = os.path.join(app.config['DFPr'],secure_filename(input_image.filename))
+            #input_image.save(imageoutput)
+            #imageoutput=secure_filename(input_image.filename)
+            #webcam.release()
+            #print("Camera off.")
+            #print("Program ended.")
+            cv2.destroyAllWindows()
+            break
+         
+     except(KeyboardInterrupt):
+            print("Turning off camera.")
+            webcam.release()
+            print("Camera off.")
+            print("Program ended.")
+            cv2.destroyAllWindows()
+            break
+    #while True:
+     #   frameId = vc.get(1) # current frame number
+      #  print(frameId)
+       # frameRate = vc.get(5) # frame rate
+        #print(frameRate)
+        #ret, frame = vc.read() # We get the last frame.
+        #namedWindow("cam-test")
+        #imshow("cam-test",frame)
+        #filename = imagesFolder + "/image_" +  str(int(frameId)) + ".jpg"
+        #print(filename)
+        #imwrite(filename,frame)
+        #if cv2.waitKey(1) & 0xFF == ord('q'):
+         #   break 
+        
+         #save image
+        #filename = imagesFolder + "/image_" +  str(int(frameId)) + ".jpg"
+        #imwrite(filename,frame) #save image
+        #if cv2.waitKey(1) & 0xFF == ord('q'):
+           #break
+        #destroyWindow("cam-test")1
+        
+        #if (ret != True):
+            #break
+        #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # We do some colour transformations.
+        
+        #canvas = detection(gray, frame) # We get the output of our detect function.ret, frame = cap.read()
+        
+        #if (frameId % math.floor(frameRate) == 0):
+            
+            
+            #filename = imagesFolder + "/image_" +  str(int(frameId)) + ".jpg"
+            #print(filename)
+            #cv2.imwrite(filename, frame)
+            #print(cv2.imwrite(filename, frame))
+            
+            #_, img = vc.read() 
+        #grayscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
+        #final = detection(grayscale, img) 
+        #cv2.imshow('Video', canvas)
+        #filename = imagesFolder + "/image_" + str(int(frameId)) + ".jpg"
+        #cv2.imwrite(filename, frame)
+       # if cv2.waitKey(1) & 0xFF == ord('q'):
+           # break 
+        
+
+
+            
+    #vc.release()
+
+   
+   
+     
+    return render_template('/object/smile/smileoutput.html', model_name="Object Detection", visualize=imageoutput)
+    
+  #------------------------------Recurrent Neural Network  -------------------------------------------
+
+
+@app.route('/rnn')
+def rnn():
+    return render_template('/rnn/rnn.html')
+
+#------------------------------Face Recognition-------------------------------------------
+model_moviereview = load_model("static/data-preprocess/model/nlpmovierreview.h5")
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.models import load_model
+tokenizer = Tokenizer(num_words=1000)
+def predict_moview_review(text):
+  pad='pre'
+  tokens = tokenizer.texts_to_sequences(text)
+  tokens_pad = pad_sequences(tokens, maxlen=544,padding=pad, truncating=pad)
+  result= model_moviereview.predict(tokens_pad)
+  result=result[0][0]
+  if result > 0.5:
+    result="Positive"
+  else:
+    result="Negative"
+  
+  return result
+@app.route('/rnn/moviereview/moviereview')
+def moviereview():
+    return render_template('/rnn/moviereview/moviereview.html')
+
+
+@app.route('/rnn/moviereview/moviereview',  methods=['GET', 'POST'])
+def moviewreview1():
+   
     if request.method == 'POST':
         review_input = request.form['review']
-       
-        
-        my_dataset = request.form['my_dataset']
-        print(my_dataset)
-        
-        get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset))
-        extension= my_dataset.split(".")
-        extension=extension[1]
-        
-        if extension == "csv":
-            df = pd.read_csv(get_dataset)
-        else:
-            #target=df.iloc[:,-1].values
-            #print(target)
-            df = pd.read_csv(get_dataset, delimiter="\t", quoting=3,nrows=1000)
-        # Cleaning the texts for all review using for loop
-        df = df.dropna()
-        
-        
-        #dataset_path = os.path.join(pathforonevarLR, secure_filename(my_dataset.filename))
-        #my_dataset.save(dataset_path)
-        #get_dataset = os.path.join(app.config['LR1VAR'], secure_filename(my_dataset.filename))
-        #input=secure_filename(my_dataset.filename)
-        #extension= input.split(".")
-        #extension=extension[1]
-        
-        #if extension == "csv":
-        #df = pd.read_csv(get_dataset)
-       #else:
-            #target=df.iloc[:,-1].values
-            #print(target)
-            #df = pd.read_csv(get_dataset, delimiter="\t", quoting=3,nrows=1000)
-        
-        # Cleaning the texts for all review using for loop
-        #df = df.dropna()
-        import nltk
-        nltk.download('stopwords')
-        from nltk.corpus import stopwords
-        from nltk.stem.porter import PorterStemmer
-        corpus = []
-        for i in range(0, df.shape[0]):
-            review = re.sub('[^a-zA-Z]', ' ', df.iloc[:,0][i])
-            review = review.lower()
-            review = review.split()
-            ps = PorterStemmer()
-            review = [ps.stem(word) for word in review if not word in set(stopwords.words('english'))]
-            review = ' '.join(review)
-    
-            corpus.append(review)#df = df.fillna(method='ffill')
-        # Creating the Bag of Words model
-        from sklearn.feature_extraction.text import CountVectorizer
-        cv = CountVectorizer(max_features = 1500)
-
-        X = cv.fit_transform(corpus).toarray()
-        y = df.iloc[:, 1].values
-        # Splitting the dataset into the Training set and Test set
-        from sklearn.model_selection import train_test_split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)#col_no = df.shape[1]
-
-        
-
-        
-        
-        # Fitting Naive Bayes to the Training set
-        from sklearn.naive_bayes import GaussianNB
-        classifier = GaussianNB()
-        classifier.fit(X_train, y_train)
-        
-        #output = classifier.predict([[review]])
-        input_data = [review_input ] 
-  
-        input_data = cv.transform(input_data).toarray()
-
-
-        input_pred = classifier.predict(input_data)
-
-        input_pred = input_pred.astype(int)
-
-
-        if input_pred[0]==1:
-            prediction=" Positive"
-        else:
-            prediction=" Negative"
-        
         
        
-        return render_template('/nlp/sentiment/sentimentpredicted.html', dataset_name=my_dataset, ans=prediction, model_name='Sentiment Analysis', first_col=review_input, second_col=prediction)
+        
+        
+        pred=predict_moview_review(review_input)
+        
 
-#----------------------Language Translation------------------------------
+        return render_template('/rnn/moviereview/moviereviewoutput.html', pred=pred)  
 
-
-@app.route('/nlp/language/language')
-def language1():
-    return render_template('/nlp/language/language.html')
-
-
+#-------------------Flask Application--------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
     
@@ -2837,3 +767,7 @@ def add_header(response):
     response.headers['Expires'] = '-1'
     return response
 app.config["CACHE_TYPE"] = "null"
+
+
+
+

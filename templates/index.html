@@ -15,9 +15,9 @@
 
 <body>
     <nav style="width: 100%;" class="navbar navbar-dark bg-secondary">
-        <a class="  navbar-brand" href="#" style="margin-left: 25px;">
-             <img src="{{ url_for('static',filename = 'image/logo.png')  }}" 
-             class="img-responsive" style="margin-top:10px;style="width: auto; height: auto; min-width: 600px;min-height: 600px;">
+        <a class="  navbar-brand" href="#" style="margin-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom:0px">
+             <img style="max-height: auto; width:100%;" src="{{ url_for('static',filename = 'image/PIET logo with tagline1.jpg')  }}" 
+             class="img-responsive" style="margin-top:0px;style=width: auto; height: auto; min-width:100%; min-height: auto;">
           
               
               <a href="/aboutusnew" style="color: red; margin-right: 10px;">ABOUT US</a>
@@ -32,7 +32,7 @@
         <div class="row">
             <div class="col-5 d-none d-sm-block d-sm-none d-md-block d-md-none d-lg-block">
 
-                <img src="{{ url_for('static',filename = 'image/DanceBot-3-LG.gif')  }}" class="img-fluid"
+                <img src="{{ url_for('static',filename = 'image/ML-vs-DL.gif')  }}" class="img-fluid"
                     style="width: auto; height: auto; min-width: 400px;min-height: 400px;">
 
             </div>
@@ -40,7 +40,7 @@
             <div class="col-xs-12 col-sm-12 col-md-12 col-lg-7 " style=" padding: 30px;">
                 <h1>Deep Learning</h1>
                 <br><br>
-                <p style="font-size:20px;text-align:justify; color:blue">It is a web portal to understand the basics of Machine Learning. It helps to understand data pre-processing, Supervised machine learning, Unsupervised Machine Learning, Feature Engineering, Feature selection and Natural language processing. It allows users to upload datasets which are to be pre-processed. It creates Machine Learning Model on Given datasets. It Extracts relevant features from datasets and also transforms Features. Natural language Processing model is also constructed model is used to identify sentiment of given comment. It is also used to translate  one language into another language. </p>
+                <p style="font-size:20px;text-align:justify; color:blue">It is a web portal to understand the basics of Deep Learning. It helps to understand Artificial Neural network, Convolution Neural Network, Recurrent Neural Network Learning, Reinforcement Larning and object detection.  It allows users to upload images for classification. This portal also list Computer Vision applications </p>
               
                 
                 <br><br>
@@ -59,9 +59,9 @@
                             class="card-img-top" alt="...">
                         <div class="card-body">
                             <h5 class="card-title"; style="text-align:center">Artificial Neural Network</h5>
-                            <p class="card-text"; style="text-align:justify">Data preprocessing is a process of preparing the raw data and making it suitable for a machine learning model. It is the first and crucial step while creating a machine learning model. Data preprocessing is neccessory to train ml model.</p>
+                            <p class="card-text"; style="text-align:justify">Artificial neural network is massive parallel Distributed system which has natural propensity to store experimental Knowledge and making them available for use.</p>
             
-                            <a href="/preprocessing"><button type="button" class="btn btn-outline-primary">Image Classification Using ANN
+                            <a href="/ann"><button type="button" class="btn btn-outline-primary">Image Classification Using ANN
                                     &#9655;</button></a>
                         </div>
             
@@ -71,7 +71,145 @@
             </div>
             
     
-    <br><br><br><br><br>
+      
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 300px;" src="{{ url_for('static',filename = 'image/dp ml.jpg')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title"; style="text-align:center">Convolutional Neural Network</h5>
+                            <p class="card-text"; style="text-align:justify">convolutional neural network  is a class of artificial neural network, most commonly applied to analyze visual imagery. A convolutional neural network consists convolution, RELU, pooling and flatten operation. </p>
+            
+                            <a href="/cnn"><button type="button" class="btn btn-outline-primary">Image Classification Using CNN
+                                    &#9655;</button></a>
+                        </div>
+            
+            
+                    </div>
+                </div>
+            </div>
+  
+       
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 300px;" src="{{ url_for('static',filename = 'image/dp ml.jpg')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title"; style="text-align:center">Recurrent Neural Network</h5>
+                            <p class="card-text"; style="text-align:justify">Recurrent Neural Network(RNN) are a type of Neural Network where the output from previous step are fed as input to the current step.  The main and most important feature of RNN is Hidden state, which remembers some information about a sequence..</p>
+            
+                            <a href="/rnn"><button type="button" class="btn btn-outline-primary">Image Classification Using ANN
+                                    &#9655;</button></a>
+                        </div>
+            
+            
+                    </div>
+                </div>
+             </div>
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 300px;" src="{{ url_for('static',filename = 'image/dp ml.jpg')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title"; style="text-align:center">Object Detection</h5>
+                            <p class="card-text"; style="text-align:justify">Object recognition is refers to a collection of related tasks for identifying objects in digital photographs.
+Region-Based Convolutional Neural Networks, or R-CNNs, are a family of techniques for addressing object localization and recognition tasks.</p>
+            
+                            <a href="/object"><button type="button" class="btn btn-outline-primary">Object detection
+                                    &#9655;</button></a>
+                        </div>
+            
+            
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 300px;" src="{{ url_for('static',filename = 'image/dp ml.jpg')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title"; style="text-align:center">Video Processing</h5>
+                            <p class="card-text"; style="text-align:justify"> video processing is a particular case of signal processing, in particular image processing, which often employs video filters and where the input and output signals are video files or video streams. </p>
+            
+                            <a href="/preprocessing"><button type="button" class="btn btn-outline-primary">Image Classification Using ANN
+                                    &#9655;</button></a>
+                        </div>
+            
+            
+                    </div>
+                </div>
+            </div>
+            </div> 
+            <br>
+            
+            
+            <div class="col-md-12">
+              <center><h3 class="section-title" style="text-align: center;">Sponsored by</h3></center>
+            </div>
+          
+          <br>
+          <br>
+    
+      <div class="container">
+        <div class="row">
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 200px;" src="{{ url_for('static',filename = 'image/AICTEIdeaLabFooterLogo.png')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title" style="text-align:center">IDEA LAB</h5>
+                            
+                        </div>
+            
+            
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xs-12 col-md-4">
+                <div class="card mb-3">
+            
+                    <div class="card">
+                        <img style="max-height: 200px;" src="{{ url_for('static',filename = 'image/nbanew.png')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title" style="text-align:center">NBA</h5>
+                            
+                        </div>
+            
+            
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xs-10 col-md-3">
+                <div class="card mb-3">
+
+                    <div class="card">
+                        <img style="max-height: 200px;"
+                            src="{{ url_for('static',filename = 'image/aicte-logo.png')  }}"
+                            class="card-img-top" alt="...">
+                        <div class="card-body">
+                            <h5 class="card-title"; style="text-align:center">AICTE MODROB DEEP LEARNING LAB</h5>
+                            
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            
+            <br><br><br><br><br>
     <div class="fixed-bottom ">
         <div class="bg-secondary " style="min-height: 40px;">
 
