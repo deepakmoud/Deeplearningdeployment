@@ -15,7 +15,7 @@ MarkupSafe==2.0.1
 matplotlib==3.4.2
 numpy==1.20.3
 pandas==1.2.4
-Pillow==8.2.0
+
 pipreqs==0.4.10
 pyparsing==2.4.7
 python-dateutil==2.8.1
@@ -23,7 +23,7 @@ pytz==2021.1
 requests==2.25.1
 
 scipy==1.6.3
-six==1.16.0
+
 
 threadpoolctl==2.1.0
 urllib3==1.26.4
@@ -34,6 +34,6 @@ nltk
 tensorflow-cpu
 
 
-oauthlib
-pyOpenSSL
+
+
 
