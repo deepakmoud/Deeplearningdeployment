@@ -556,7 +556,7 @@ def faceexpression1():
         return render_template('/cnn/faceexpression/faceexpressionoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 #----------------Object detection----------------------
 import math
-from cv2 import *
+
 import os
 directory = r'F:\ML\Deep Learning Lab Deployment\static\data-preprocess\new'
 cascade_face = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_frontalface_default.xml') 
