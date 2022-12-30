@@ -1,14 +1,14 @@
 from flask.helpers import send_file
 from jinja2 import Template
 
-
+import matplotlib
 import matplotlib.pyplot as plt
 from os import path
 import re
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 import os
-
+import numpy as np
 # Feature Scaling
 
 
@@ -37,22 +37,22 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 #------------------------------ Saving dataset---------------------------------
 # this is the path to save dataset for preprocessing
-pathfordataset = "static/data-preprocess/"
-pathfordatasetNew = "data-preprocess/new/"  
- 
+pathfordataset = "/home/moud/Deeplearningdeployment/static/data-preprocess/"
+pathfordatasetNew = "/home/moud/Deeplearningdeployment/data-preprocess/new/"
+
 app.config['DFPr'] = pathfordataset
 app.config['DFPrNew'] = pathfordatasetNew
 #------------------------------ Saving dataset for Linear regression-------------------------------------------
 # this is the path to save dataset for single variable LR
-pathforonevarLR = "static/Regression/onevarLR"
-pathforonevarLRplot = "Regression/onevarLR/plot"
+pathforonevarLR = "/home/moud/Deeplearningdeployment/static/Regression/onevarLR"
+pathforonevarLRplot = "/home/moud/Deeplearningdeployment/static/Regression/onevarLR/plot"
 app.config['LR1VAR'] = pathforonevarLR
 app.config['LR1VARplot'] = pathforonevarLRplot
 
 #------------------------------ Saving image for K means-------------------------------------------
 # this is the path to save figure of K menas
-pathforelbowplot = "kmeans/plot"
-#pathforonevarLRplot = "Regression/onevarLR/plot"
+pathforelbowplot = "/home/moud/Deeplearningdeployment/static/kmeans/plot"
+#pathforonevarLRplot = "/home/moud/Deeplearningdeployment/static/Regression/onevarLR/plot"
 #app.config['LR1VAR'] = pathforonevarLR
 app.config['elbowplot'] = pathforelbowplot
 #print(app.config['elbowplot'])
@@ -81,13 +81,13 @@ def model_predict(file_path, model):
 
 @app.route('/downloadNewDataset')
 def download_file():
-    path1 = "static/data-preprocess/new/trained_dataset.csv"
+    path1 = "/home/moud/Deeplearningdeployment/static/data-preprocess/new/trained_dataset.csv"
     return send_file(path1,as_attachment=True)
 
 #------------------------------Download Model-------------------------------------------
 @app.route('/downloadmodel')
 def download_model():
-    path1 = "static/data-preprocess/model/model.pkl"
+    path1 = "/home/moud/Deeplearningdeployment/static/data-preprocess/model/model.pkl"
     return send_file(path1,as_attachment=True)
 
 #------------------------------About us-------------------------------------------
@@ -124,11 +124,11 @@ def signatureverification():
 
 @app.route('/ann/signatureverification/signatureverification',  methods=['GET', 'POST'])
 def signatureverification1():
-   
+
     if request.method == 'POST':
         my_dataset = request.files['my_dataset']
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(my_dataset.filename))
         my_dataset.save(dataset_path)
         print(my_dataset)
@@ -138,7 +138,7 @@ def signatureverification1():
         extension= input.split(".")
         extension=extension[1]
         print(extension)
-        model = load_model("static/data-preprocess/model/model_vgg19.h5")
+        model = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/model_vgg19.h5")
         # Make prediction
         preds = model_predict(get_dastaset, model)
 
@@ -150,10 +150,10 @@ def signatureverification1():
             result='Forged'
         plt.plot(get_dastaset)
 
-        
+
         fig = plt.gcf()
         img_name1 = 'vgg19'
-        fig.savefig('static/kmeans/plot/vgg19.png', dpi=1500)
+        fig.savefig('/home/moud/Deeplearningdeployment/static/kmeans/plot/vgg19.png', dpi=1500)
         #elbow_plot = os.path.join(app.config['elbowplot'], '%s.png' % img_name1)
         vgg19_plot = os.path.join('kmeans\plot', '%s.png' % img_name1)
         plt.clf()
@@ -161,12 +161,12 @@ def signatureverification1():
         return render_template('/ann/signatureverification/signatureverificationoutput.html', model_name=my_model_name,my_dataset=my_dataset, pred=result, visualize=input )
 
 #-----------------------Digit Recognition---------------------------------------------
-model_digit = load_model("static/data-preprocess/model/MNISTANN.h5")
+model_digit = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/MNISTANN.h5")
 
 def import_and_predict(image_data):
-  
-  image_resized = cv2.resize(image_data, (28, 28)) 
-   
+
+  image_resized = cv2.resize(image_data, (28, 28))
+
   prediction = model_digit.predict(image_resized.reshape(1,784))
   print('Prediction Score:\n',prediction[0])
   thresholded = (prediction>0.5)*1
@@ -185,33 +185,33 @@ def digit():
 
 @app.route('/ann/digit/digit',  methods=['GET', 'POST'])
 def digit1():
-   
+
     if request.method == 'POST':
         input_image = request.files['input_image']
         print(input_image)
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
         input_image.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
         input=secure_filename(input_image.filename)
-        
+
         image=Image.open(input_image)
         image=np.array(image)
-        
+
         #image=np.array(input_image)
         preds = import_and_predict(image)
 
-        
+
 
         return render_template('/ann/digit/digitoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 
 #----------------------Image Classification cat/ Dog------------------------------
-model_cat = load_model("static/data-preprocess/model/FDPCNN1.h5")
+model_cat = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/FDPCNN1.h5")
 
 def import_and_predict_cat(image_data):
-  #x = cv2.resize(image_data, (48, 48)) 
+  #x = cv2.resize(image_data, (48, 48))
   #img = image.load_img(image_data, target_size=(48, 48))
   #x = image.img_to_array(img)
   size=(64, 64)
@@ -223,13 +223,13 @@ def import_and_predict_cat(image_data):
   print(result)
   #training_set.class_indices
   if result[0][0] == 1:
-    prediction = "Dog" 
-    
+    prediction = "Dog"
+
   else:
     prediction = 'Cat'
     #x = np.expand_dims(x, axis=1)
-  
-  
+
+
   return prediction
 
 
@@ -240,31 +240,31 @@ def cat():
 
 @app.route('/ann/cat/cat',  methods=['GET', 'POST'])
 def cat1():
-   
+
     if request.method == 'POST':
         input_image = request.files['input_image']
         print(input_image)
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
         input_image.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
         input=secure_filename(input_image.filename)
-        
+
         image=Image.open(input_image)
         #image=np.array(image)
-        
+
         #image=np.array(input_image)
         preds = import_and_predict_cat(image)
 
-        
+
 
         return render_template('/ann/cat/catoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 
 
 #-------------Signature recognition-----------------------------------------------
-model_signaturerecognition = load_model("static/data-preprocess/model/signatureRecognition_VGG16folder_model.h5")
+model_signaturerecognition = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/FDPCNN1.h5")
 SIGNATURE_CLASSES = ['001', '002', '003','004','006','009','012','013','014','015','016','017','018','019','020','021','022','023','024','025','026','027','028','029','030','031','032','033','034','035','036','037','038','039','040','041','042','043','044','045','046','047','048','049','050','051','052','053','054','055','056','057','058','059','060','061','062','063','064','065','066','067','068','069']
 def import_and_predict_recognition(image_data, model):
   #img = image.load_img(image_data, target_size=(224, 224))
@@ -290,31 +290,31 @@ def signaturerecognition():
 
 @app.route('/ann/signaturerecognition/signaturerecognition',  methods=['GET', 'POST'])
 def signaturerecognition1():
-   
+
     if request.method == 'POST':
         input_image = request.files['input_image']
-        
+
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
         input_image.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
         input=secure_filename(input_image.filename)
-        
+
         image=Image.open(input_image)
         #image=np.array(image)
-        
+
         #image=np.array(input_image)
         preds = import_and_predict_recognition(image, model_signaturerecognition)
 
-        
+
 
         return render_template('/ann/signaturerecognition/signaturerecognitionoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 
 #--------------------Animal Breed identification---------------------------------
 
-model_breed = load_model("static/data-preprocess/model/resnet_model.h5")
+model_breed = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/FDPCNN1.h5")
 def model_predict_breed(img_path, model):
     img = image.load_img(img_path, target_size=(224, 224))
 
@@ -337,19 +337,19 @@ def breed():
 
 @app.route('/ann/breed/breed',  methods=['GET', 'POST'])
 def breed1():
-   
+
     if request.method == 'POST':
         my_dataset = request.files['input_image']
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(my_dataset.filename))
         my_dataset.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename(my_dataset.filename))
-        
+
         input=secure_filename(my_dataset.filename)
-        
-        
+
+
         # Make prediction
         preds = model_predict_breed(get_dastaset, model_breed)
 
@@ -358,17 +358,17 @@ def breed1():
 
         return render_template('/ann/breed/breedoutput.html', model_name=my_model_name,my_dataset=my_dataset, pred=result, visualize=input )
 #-----------------------Character Recognition---------------------------------------------
-model_char = load_model("static/data-preprocess/model/alphabet.h5")
+model_char = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/alphabet.h5")
 
 def predict_char(image_data):
-  
+
   test_image = image.load_img(image_data, target_size = (32,32))
   test_image = image.img_to_array(test_image)
   test_image = np.expand_dims(test_image, axis = 0)
   result = model_char.predict(test_image)
   result = get_result(result)
   return result
-  
+
 def get_result(result):
     if result[0][0] == 1:
         return('a')
@@ -430,26 +430,26 @@ def character():
 
 @app.route('/ann/character/character',  methods=['GET', 'POST'])
 def character1():
-   
+
     if request.method == 'POST':
         my_dataset = request.files['input_image']
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(my_dataset.filename))
         my_dataset.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename(my_dataset.filename))
-        
+
         input=secure_filename(my_dataset.filename)
-        
-        
+
+
         # Make prediction
         preds = predict_char(get_dastaset)
 
-        
+
 
         return render_template('/ann/character/characteroutput.html', model_name=my_model_name,my_dataset=my_dataset, pred=preds, visualize=input )
-    
+
 #------------------------------Convolution  Neural network-------------------------------------------
 
 
@@ -458,10 +458,10 @@ def cnn():
     return render_template('/cnn/cnn.html')
 
 #------------------------------Face Recognition-------------------------------------------
-model_face = load_model("static/data-preprocess/model/Facemodel.h5")
+model_face = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/Facemodel.h5")
 FACE_CLASSES = ['ben_afflek', 'elton_john','jerry_seinfeld','madonna','mindy_kaling']
 def predict_face(image_data):
-  #x = cv2.resize(image_data, (48, 48)) 
+  #x = cv2.resize(image_data, (48, 48))
   #img = image.load_img(image_data, target_size=(48, 48))
   #x = image.img_to_array(img)
   size=(224, 224)
@@ -470,12 +470,12 @@ def predict_face(image_data):
   img_reshape=np.expand_dims(img, axis=1)
   img_reshape=img[np.newaxis,...]
   features = model_face.predict(img_reshape)
-  
+
   label_index=features.argmax()
   print(label_index)
-  
-  
-  
+
+
+
   return FACE_CLASSES[label_index]
 
 @app.route('/cnn/face/face')
@@ -485,30 +485,30 @@ def face():
 
 @app.route('/cnn/face/face',  methods=['GET', 'POST'])
 def face1():
-   
+
     if request.method == 'POST':
         input_image = request.files['input_image']
-        
+
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
         input_image.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
         input=secure_filename(input_image.filename)
-        
+
         image=Image.open(input_image)
         #image=np.array(image)
-        
+
         #image=np.array(input_image)
         preds = predict_face(image)
 
-        
+
 
         return render_template('/cnn/face/faceoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 
 #------------------------------Face Expression Recognition-------------------------------------------
-model_faceexpression = load_model("static/data-preprocess/model/FaceExpressionmodel.h5")
+model_faceexpression = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/Facemodel.h5")
 FACE_CLASSES1 = ['angry', 'disgust','fear','happy','neutral', 'sad', 'surprise']
 def predict_faceexpression(image_data):
   size=(48, 48)
@@ -520,10 +520,10 @@ def predict_faceexpression(image_data):
   #x = np.expand_dims(x, axis=1)
   #x = preprocess_input(x)
   #features = model.predict(x)
-  
+
   label_index=features.argmax()
-  
-  
+
+
   return FACE_CLASSES1[label_index]
 
 @app.route('/cnn/faceexpression/faceexpression')
@@ -533,48 +533,48 @@ def faceexpression():
 
 @app.route('/cnn/faceexpression/faceexpression',  methods=['GET', 'POST'])
 def faceexpression1():
-   
+
     if request.method == 'POST':
         input_image = request.files['input_image']
-        
+
         my_model_name = request.form['name_of_model']
-        
+
         dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
         input_image.save(dataset_path)
-        
+
         get_dastaset = os.path.join(app.config['DFPr'],secure_filename( input_image .filename))
         input=secure_filename(input_image.filename)
-        
+
         image=Image.open(input_image)
         #image=np.array(image)
-        
+
         #image=np.array(input_image)
         preds = predict_faceexpression(image)
 
-        
+
 
         return render_template('/cnn/faceexpression/faceexpressionoutput.html', model_name=my_model_name,my_dataset=input_image, pred=preds, visualize=input )
 #----------------Object detection----------------------
 import math
 
 import os
-directory = r'F:\ML\Deep Learning Lab Deployment\static\data-preprocess\new'
-cascade_face = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_frontalface_default.xml') 
-cascade_eye = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_eye.xml') 
+directory = r'\home\moud\Deeplearningdeployment\static\data-preprocess\new'
+cascade_face = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_frontalface_default.xml')
+cascade_eye = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_eye.xml')
 cascade_smile = cv2.CascadeClassifier('static/data-preprocess/model/haarcascade_smile.xml')
 def detection(grayscale, img):
     face = cascade_face.detectMultiScale(grayscale, 1.3, 5)
     for (x_face, y_face, w_face, h_face) in face:
         cv2.rectangle(img, (x_face, y_face), (x_face+w_face, y_face+h_face), (255, 130, 0), 2)
         ri_grayscale = grayscale[y_face:y_face+h_face, x_face:x_face+w_face]
-        ri_color = img[y_face:y_face+h_face, x_face:x_face+w_face] 
-        eye = cascade_eye.detectMultiScale(ri_grayscale, 1.2, 18) 
+        ri_color = img[y_face:y_face+h_face, x_face:x_face+w_face]
+        eye = cascade_eye.detectMultiScale(ri_grayscale, 1.2, 18)
         for (x_eye, y_eye, w_eye, h_eye) in eye:
-            cv2.rectangle(ri_color,(x_eye, y_eye),(x_eye+w_eye, y_eye+h_eye), (0, 180, 60), 2) 
+            cv2.rectangle(ri_color,(x_eye, y_eye),(x_eye+w_eye, y_eye+h_eye), (0, 180, 60), 2)
         smile = cascade_smile.detectMultiScale(ri_grayscale, 1.7, 20)
-        for (x_smile, y_smile, w_smile, h_smile) in smile: 
+        for (x_smile, y_smile, w_smile, h_smile) in smile:
             cv2.rectangle(ri_color,(x_smile, y_smile),(x_smile+w_smile, y_smile+h_smile), (255, 0, 130), 2)
-    return img 
+    return img
 @app.route('/object')
 def object():
     return render_template('/object/object.html')
@@ -587,25 +587,25 @@ def smile():
 def smiledetection():
     if request.method == 'POST':
         input_image = request.files['input_image']
-    
+
         key = cv2. waitKey(1)
-        webcam = cv2.VideoCapture(0) 
+        webcam = cv2.VideoCapture(0)
 
     while True:
      try:
         check, frame = webcam.read()
         print(check) #prints true as long as the webcam is running
-        print(frame) #prints matrix values of each framecd 
+        print(frame) #prints matrix values of each framecd
         #cv2.imshow("Capturing", frame)
         key = cv2.waitKey(1)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         canvas = detection(gray, frame)
         cv2.imshow('Video is Running. Press S on Keyboard to save Image', canvas)
-        if key == ord('s'): 
+        if key == ord('s'):
             os.chdir(directory)
             cv2.imwrite(filename='saved_img.jpg',img=frame)
             imageoutput = os.path.join(app.config['DFPrNew'], 'saved_img.jpg')
-                     
+
             #filename ='F:\ML\Deep Learning Lab Deployment\static\data-preprocess\new\saved_img.jpg'
             webcam.release()
             cv2.waitKey(1650)
@@ -619,7 +619,7 @@ def smiledetection():
             #img_ = cv2.resize(gray,(28,28))
             #print("Resized...")
             #img_resized = cv2.imwrite(filename='saved_img-final.jpg', img=img_)
-            #print("Image saved!")        
+            #print("Image saved!")
             break
         elif key == ord('q'):
             print("Turning off camera.")
@@ -630,7 +630,7 @@ def smiledetection():
             #dataset_path = os.path.join(pathfordataset, secure_filename(input_image.filename))
             #print(dataset_path)
             #input_image.save(dataset_path)
-        
+
             #imageoutput = os.path.join(app.config['DFPr'],secure_filename(input_image.filename))
             #print(imageoutput)
             #imageoutput=secure_filename(input_image.filename)
@@ -642,7 +642,7 @@ def smiledetection():
             #print("Program ended.")
             cv2.destroyAllWindows()
             break
-         
+
      except(KeyboardInterrupt):
             print("Turning off camera.")
             webcam.release()
@@ -662,48 +662,48 @@ def smiledetection():
         #print(filename)
         #imwrite(filename,frame)
         #if cv2.waitKey(1) & 0xFF == ord('q'):
-         #   break 
-        
+         #   break
+
          #save image
         #filename = imagesFolder + "/image_" +  str(int(frameId)) + ".jpg"
         #imwrite(filename,frame) #save image
         #if cv2.waitKey(1) & 0xFF == ord('q'):
            #break
         #destroyWindow("cam-test")1
-        
+
         #if (ret != True):
             #break
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # We do some colour transformations.
-        
+
         #canvas = detection(gray, frame) # We get the output of our detect function.ret, frame = cap.read()
-        
+
         #if (frameId % math.floor(frameRate) == 0):
-            
-            
+
+
             #filename = imagesFolder + "/image_" +  str(int(frameId)) + ".jpg"
             #print(filename)
             #cv2.imwrite(filename, frame)
             #print(cv2.imwrite(filename, frame))
-            
-            #_, img = vc.read() 
-        #grayscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
-        #final = detection(grayscale, img) 
+
+            #_, img = vc.read()
+        #grayscale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        #final = detection(grayscale, img)
         #cv2.imshow('Video', canvas)
         #filename = imagesFolder + "/image_" + str(int(frameId)) + ".jpg"
         #cv2.imwrite(filename, frame)
        # if cv2.waitKey(1) & 0xFF == ord('q'):
-           # break 
-        
+           # break
 
 
-            
+
+
     #vc.release()
 
-   
-   
-     
+
+
+
     return render_template('/object/smile/smileoutput.html', model_name="Object Detection", visualize=imageoutput)
-    
+
   #------------------------------Recurrent Neural Network  -------------------------------------------
 
 
@@ -712,7 +712,7 @@ def rnn():
     return render_template('/rnn/rnn.html')
 
 #------------------------------Face Recognition-------------------------------------------
-model_moviereview = load_model("static/data-preprocess/model/nlpmovierreview.h5")
+model_moviereview = load_model("/home/moud/Deeplearningdeployment/static/data-preprocess/model/nlpmovierreview.h5")
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
@@ -727,7 +727,7 @@ def predict_moview_review(text):
     result="Positive"
   else:
     result="Negative"
-  
+
   return result
 @app.route('/rnn/moviereview/moviereview')
 def moviereview():
@@ -736,22 +736,22 @@ def moviereview():
 
 @app.route('/rnn/moviereview/moviereview',  methods=['GET', 'POST'])
 def moviewreview1():
-   
+
     if request.method == 'POST':
         review_input = request.form['review']
-        
-       
-        
-        
-        pred=predict_moview_review(review_input)
-        
 
-        return render_template('/rnn/moviereview/moviereviewoutput.html', pred=pred)  
+
+
+
+        pred=predict_moview_review(review_input)
+
+
+        return render_template('/rnn/moviereview/moviereviewoutput.html', pred=pred)
 
 #-------------------Flask Application--------------------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
-    
+
 # No caching at all for API endpoints.
 @app.after_request
 def add_header(response):
